@@ -110,7 +110,7 @@ graph TB
 
 ## 🔧 Tech Stack
 
-- **Backend**: Java 21, Spring Boot 3.3, Gradle 8.10
+- **Backend**: Java 21, Spring Boot 3.3, Gradle 8.10 with Kotlin DSL
 - **AI/Financial**: Python 3.11-3.12, FastAPI, SQLModel, Gemini 2.0 Flash
 - **Messaging**: Go 1.22, Brevo REST API
 - **Persistence**: PostgreSQL, Flyway, Alembic
