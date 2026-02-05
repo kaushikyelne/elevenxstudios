@@ -5,8 +5,6 @@ import com.moneylane.modules.auth.application.port.in.RegisterUserUseCase;
 import com.moneylane.modules.auth.domain.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,11 +20,6 @@ public class AuthController {
     private final RegisterUserUseCase registerUserUseCase;
     private final AuthenticateUserUseCase authenticateUserUseCase;
 
-    @GetMapping("/admin-test")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<String> adminTest() {
-        return ResponseEntity.ok("Admin access granted!");
-    }
 
     @PostMapping("/register")
     public ResponseEntity<RegistrationResponse> register(@RequestBody RegistrationRequest request) {
@@ -36,8 +29,7 @@ public class AuthController {
 
         return ResponseEntity.ok(new RegistrationResponse(
                 user.getId().getValue(),
-                user.getEmail(),
-                user.getRole().name()));
+                user.getEmail()));
     }
 
     @PostMapping("/login")
@@ -65,7 +57,7 @@ public class AuthController {
     public record RegistrationRequest(String email, String password) {
     }
 
-    public record RegistrationResponse(UUID id, String email, String role) {
+    public record RegistrationResponse(UUID id, String email) {
     }
 
     public record LoginRequest(String email, String password) {

@@ -32,13 +32,12 @@ public class JwtTokenServiceAdapter implements TokenServicePort {
     }
 
     @Override
-    public TokenResult generateAccessToken(String email, String role) {
+    public TokenResult generateAccessToken(String email) {
         Instant now = Instant.now();
         Instant expiresAt = now.plus(accessExpirationInSeconds, ChronoUnit.SECONDS);
 
         String token = Jwts.builder()
                 .subject(email)
-                .claim("role", role)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(expiresAt))
                 .signWith(accessKey)
@@ -80,9 +79,9 @@ public class JwtTokenServiceAdapter implements TokenServicePort {
                     .parseSignedClaims(token)
                     .getPayload();
 
-            return new TokenValidationResult(true, claims.getSubject(), claims.get("role", String.class));
+            return new TokenValidationResult(true, claims.getSubject());
         } catch (Exception e) {
-            return new TokenValidationResult(false, null, null);
+            return new TokenValidationResult(false, null);
         }
     }
 }

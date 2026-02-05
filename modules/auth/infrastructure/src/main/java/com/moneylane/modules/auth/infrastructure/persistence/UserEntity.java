@@ -26,8 +26,6 @@ public class UserEntity {
     @Column(nullable = false)
     private String passwordHash;
 
-    private String role;
-
     private String status;
 
     @CreationTimestamp
