@@ -40,13 +40,17 @@ moneylane/
 
 ### Auth Module
 - **User Registration**: Secure registration with BCrypt password hashing.
+- **JWT Authentication**: Stateless authentication using access and refresh tokens.
+- **Token Management**: Automatic token generation and validation.
 - **Validation**: Strict email format and password length validation.
+- **Simplified Security**: Single-tier authentication without role-based access control.
 - **Hexagonal Flow**:
   1. `AuthController` receives request.
-  2. `RegisterUserUseCase` (Port) is called.
+  2. `RegisterUserUseCase` or `AuthenticateUserUseCase` (Port) is called.
   3. `AuthService` executes business logic.
   4. `PasswordEncoderPort` is used for hashing.
-  5. `UserRepository` (Port) saves to DB.
+  5. `TokenServicePort` generates JWT tokens.
+  6. `UserRepository` (Port) saves to DB.
 
 ## Getting Started
 
@@ -59,13 +63,51 @@ moneylane/
 ./gradlew :bootstrap:bootRun
 ```
 
-### API Usage - User Registration
+### API Usage
+
+#### User Registration
 **POST** `/api/v1/auth/register`
 
 ```json
 {
   "email": "user@example.com",
   "password": "password123"
+}
+```
+
+**Response**:
+```json
+{
+  "id": "uuid",
+  "email": "user@example.com"
+}
+```
+
+#### User Login
+**POST** `/api/v1/auth/login`
+
+```json
+{
+  "email": "user@example.com",
+  "password": "password123"
+}
+```
+
+**Response**:
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiJ9...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiJ9...",
+  "expires_at": 1770317767033
+}
+```
+
+#### Token Refresh
+**POST** `/api/v1/auth/refresh`
+
+```json
+{
+  "refreshToken": "eyJhbGciOiJIUzI1NiJ9..."
 }
 ```
 
