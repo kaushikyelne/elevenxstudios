@@ -3,7 +3,7 @@ package com.moneylane.modules.auth.infrastructure.persistence;
 import com.moneylane.modules.auth.application.port.out.UserRepository;
 import com.moneylane.modules.auth.domain.User;
 import com.moneylane.modules.auth.domain.UserId;
-import com.moneylane.modules.auth.domain.Role;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -32,7 +32,6 @@ public class JpaUserRepository implements UserRepository {
                 .id(user.getId() != null ? user.getId().getValue() : null)
                 .email(user.getEmail())
                 .passwordHash(user.getPasswordHash())
-                .role(user.getRole() != null ? user.getRole().name() : null)
                 .status(user.getStatus())
                 .build();
     }
@@ -42,7 +41,6 @@ public class JpaUserRepository implements UserRepository {
                 .id(new UserId(entity.getId()))
                 .email(entity.getEmail())
                 .passwordHash(entity.getPasswordHash())
-                .role(entity.getRole() != null ? Role.valueOf(entity.getRole()) : null)
                 .status(entity.getStatus())
                 .build();
     }
