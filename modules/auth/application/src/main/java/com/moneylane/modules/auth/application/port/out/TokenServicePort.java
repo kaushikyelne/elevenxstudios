@@ -3,7 +3,7 @@ package com.moneylane.modules.auth.application.port.out;
 import java.time.Instant;
 
 public interface TokenServicePort {
-    TokenResult generateAccessToken(String email, String role);
+    TokenResult generateAccessToken(String email);
 
     TokenResult generateRefreshToken(String email);
 
@@ -14,6 +14,6 @@ public interface TokenServicePort {
     record TokenResult(String token, Instant expiresAt) {
     }
 
-    record TokenValidationResult(boolean isValid, String email, String role) {
+    record TokenValidationResult(boolean isValid, String email) {
     }
 }

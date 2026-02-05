@@ -5,7 +5,7 @@ import com.moneylane.modules.auth.application.port.in.RegisterUserUseCase;
 import com.moneylane.modules.auth.application.port.out.PasswordEncoderPort;
 import com.moneylane.modules.auth.application.port.out.TokenServicePort;
 import com.moneylane.modules.auth.application.port.out.UserRepository;
-import com.moneylane.modules.auth.domain.Role;
+
 import com.moneylane.modules.auth.domain.User;
 import com.moneylane.modules.auth.domain.UserId;
 import lombok.RequiredArgsConstructor;
@@ -38,7 +38,6 @@ public class AuthService implements RegisterUserUseCase, AuthenticateUserUseCase
                 .id(new UserId(UUID.randomUUID()))
                 .email(command.email())
                 .passwordHash(passwordHash)
-                .role(Role.USER)
                 .status("ACTIVE")
                 .build();
 
@@ -56,9 +55,7 @@ public class AuthService implements RegisterUserUseCase, AuthenticateUserUseCase
             throw new RuntimeException("Invalid credentials");
         }
 
-        TokenServicePort.TokenResult accessToken = tokenService.generateAccessToken(
-                user.getEmail(),
-                user.getRole().name());
+        TokenServicePort.TokenResult accessToken = tokenService.generateAccessToken(user.getEmail());
 
         TokenServicePort.TokenResult refreshToken = tokenService.generateRefreshToken(user.getEmail());
 
@@ -80,9 +77,7 @@ public class AuthService implements RegisterUserUseCase, AuthenticateUserUseCase
         User user = userRepository.findByEmail(validation.email())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        TokenServicePort.TokenResult newAccessToken = tokenService.generateAccessToken(
-                user.getEmail(),
-                user.getRole().name());
+        TokenServicePort.TokenResult newAccessToken = tokenService.generateAccessToken(user.getEmail());
 
         // Rotating the refresh token
         TokenServicePort.TokenResult newRefreshToken = tokenService.generateRefreshToken(user.getEmail());
