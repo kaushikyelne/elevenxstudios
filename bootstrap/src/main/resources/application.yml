@@ -24,6 +24,9 @@ server:
   port: 8080
 
 supabase:
+  url: "https://your-project.supabase.co"
   jwt:
     secret: "your-supabase-jwt-secret-here"
     issuer: "https://your-project.supabase.co/auth/v1"
+    serviceRoleKey: "your-supabase-service-role-key-here"
+  service-role-key: ${SUPABASE_SERVICE_ROLE_KEY:your-service-role-key-here}
