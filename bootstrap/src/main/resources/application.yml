@@ -22,3 +22,8 @@ springdoc:
 
 server:
   port: 8080
+
+supabase:
+  jwt:
+    secret: "your-supabase-jwt-secret-here"
+    issuer: "https://your-project.supabase.co/auth/v1"
