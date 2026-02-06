@@ -26,7 +26,10 @@ Simple Spring Boot 3.3 project structure with modular monolith and hexagonal arc
 moneylane/
 ├── bootstrap/          # Spring Boot Application runner & configuration
 ├── modules/
-│   ├── auth/           # User Registration & Authentication
+│   ├── auth/           # Multi-module Authentication System
+│   │   ├── auth-common/  # Shared domain, ports, and common logic
+│   │   ├── auth-local/   # Native Username/Password & JWT implementation
+│   │   └── auth-supabase/# Supabase 3rd party authentication provider
 │   ├── transaction/    # Transaction management
 │   ├── budget/         # Budgeting logic
 │   └── insight/        # Analytics and reports
@@ -38,78 +41,74 @@ moneylane/
 
 ## Features
 
-### Auth Module
-- **User Registration**: Secure registration with BCrypt password hashing.
-- **JWT Authentication**: Stateless authentication using access and refresh tokens.
-- **Token Management**: Automatic token generation and validation.
-- **Validation**: Strict email format and password length validation.
-- **Simplified Security**: Single-tier authentication without role-based access control.
-- **Hexagonal Flow**:
-  1. `AuthController` receives request.
-  2. `RegisterUserUseCase` or `AuthenticateUserUseCase` (Port) is called.
-  3. `AuthService` executes business logic.
-  4. `PasswordEncoderPort` is used for hashing.
-  5. `TokenServicePort` generates JWT tokens.
-  6. `UserRepository` (Port) saves to DB.
+### Auth Module (Multi-Provider)
+The authentication module follows a multi-module pattern to support both internal and external identity providers.
+
+- **`auth-common`**: Centralizes the shared `User` domain model and outbound ports (`UserRepository`, `TokenServicePort`, `PasswordEncoderPort`).
+- **`auth-local`**: 
+    - **User Registration**: Secure registration with BCrypt password hashing.
+    - **JWT Authentication**: Stateless authentication using access and refresh tokens.
+- **`auth-supabase`**:
+    - **External Auth**: Seamless integration with Supabase Auth.
+    - **Stateless Validation**: Backend JWT validation using Supabase project secrets.
+    - **Identity Mapping**: Unified endpoint for current user context.
 
 ## Getting Started
 
 ### Prerequisites
-- JDK 20 or 21
+- JDK 21
 - Docker (for PostgreSQL)
+- Supabase Project (for `auth-supabase`)
+
+### Configuration
+For Supabase integration, update your `application.yml`:
+```yaml
+supabase:
+  jwt:
+    secret: "YOUR_JWT_SECRET"
+    issuer: "https://YOUR_PROJECT.supabase.co/auth/v1"
+```
 
 ### Running the App
 ```bash
 ./gradlew :bootstrap:bootRun
 ```
 
-### API Usage
+## API Usage
+
+### Native Authentication (auth-local)
 
 #### User Registration
-**POST** `/api/v1/auth/register`
+**POST** `/api/v1/auth/local/register`
 
 ```json
 {
   "email": "user@example.com",
   "password": "password123"
-}
-```
-
-**Response**:
-```json
-{
-  "id": "uuid",
-  "email": "user@example.com"
 }
 ```
 
 #### User Login
-**POST** `/api/v1/auth/login`
+**POST** `/api/v1/auth/local/login`
 
-```json
-{
-  "email": "user@example.com",
-  "password": "password123"
-}
-```
+#### Token Refresh
+**POST** `/api/v1/auth/local/refresh`
+
+### Supabase Authentication (auth-supabase)
+
+#### Get Current User Info
+**GET** `/api/v1/auth/supabase/me`
+*Requires standard Supabase JWT in the `Authorization: Bearer <token>` header.*
 
 **Response**:
 ```json
 {
-  "access_token": "eyJhbGciOiJIUzI1NiJ9...",
-  "refresh_token": "eyJhbGciOiJIUzI1NiJ9...",
-  "expires_at": 1770317767033
-}
-```
-
-#### Token Refresh
-**POST** `/api/v1/auth/refresh`
-
-```json
-{
-  "refreshToken": "eyJhbGciOiJIUzI1NiJ9..."
+  "id": "supabase-uuid",
+  "email": "user@example.com",
+  "claims": { ... }
 }
 ```
 
 ## Documentation
 - **Swagger UI**: [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
+- **Architecture Walkthrough**: [walkthrough.md](.gemini/antigravity/brain/f95c4d7a-fc15-4a80-a446-c815847811ce/walkthrough.md)
