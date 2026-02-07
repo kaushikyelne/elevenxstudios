@@ -23,10 +23,14 @@ public class UserEntity {
     @Column(unique = true, nullable = false)
     private String email;
 
-    @Column(nullable = false)
+    @Column
     private String passwordHash;
 
     private String status;
+
+    private String externalProvider;
+
+    private String externalUserId;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
