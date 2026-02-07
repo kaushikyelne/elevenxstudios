@@ -1,46 +1,60 @@
 package com.moneylane.modules.auth.supabase.application.service;
 
+import com.moneylane.modules.auth.common.application.port.out.ExternalAuthenticationResult;
 import com.moneylane.modules.auth.common.application.port.out.ExternalIdentityProviderPort;
 import com.moneylane.modules.auth.common.application.port.out.ExternalUserContext;
 import com.moneylane.modules.auth.common.application.port.out.UserRepository;
 import com.moneylane.modules.auth.common.domain.User;
 import com.moneylane.modules.auth.common.domain.UserId;
+import com.moneylane.modules.auth.supabase.application.port.in.LoginSupabaseUserUseCase;
 import com.moneylane.modules.auth.supabase.application.port.in.SyncSupabaseUserUseCase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class SupabaseAuthService implements SyncSupabaseUserUseCase {
+public class SupabaseAuthService implements SyncSupabaseUserUseCase, LoginSupabaseUserUseCase {
 
     private final UserRepository userRepository;
     private final ExternalIdentityProviderPort externalIdentityProvider;
 
     @Override
-    @Transactional
-    public User syncUser(String externalId, String email) {
-        // Idempotent check: Do we already have this user?
-        // In a real scenario, you'd find by an 'external_id' column.
-        // For this POC, we'll simplify and check by email.
-        return userRepository.findByEmail(email)
-                .orElseGet(() -> onboardNewUser(externalId, email));
+    public Optional<ExternalAuthenticationResult> login(String email, String password) {
+        return externalIdentityProvider.authenticate(email, password)
+                .map(authResult -> {
+                    if (authResult.userContext() != null) {
+                        syncUser(authResult.userContext().externalUserId(), authResult.userContext().email());
+                    }
+                    return authResult;
+                });
     }
 
-    private User onboardNewUser(String externalId, String email) {
-        // Optionally fetch more details from the Admin API
-        ExternalUserContext externalUser = externalIdentityProvider.getDetailedUser(externalId)
-                .orElse(new ExternalUserContext(externalId, email, java.util.Map.of()));
+    @Override
+    @Transactional
+    public User syncUser(String externalUserId, String email) {
 
-        User newUser = User.builder()
+        return userRepository.findByExternalUserId(externalUserId)
+                .orElseGet(() -> onboardNewUser(externalUserId, email));
+    }
+
+    private User onboardNewUser(String externalUserId, String email) {
+
+        ExternalUserContext externalUser = externalIdentityProvider.getDetailedUser(externalUserId)
+                .orElse(new ExternalUserContext(externalUserId, email, java.util.Map.of()));
+
+        User user = User.builder()
                 .id(new UserId(UUID.randomUUID()))
+                .externalProvider("SUPABASE")
+                .externalUserId(externalUser.externalUserId())
                 .email(externalUser.email())
                 .status("ACTIVE")
                 .build();
 
-        userRepository.save(newUser);
-        return newUser;
+        userRepository.save(user);
+        return user;
     }
 }

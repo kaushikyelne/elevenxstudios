@@ -27,12 +27,20 @@ public class JpaUserRepository implements UserRepository {
                 .map(this::mapToDomain);
     }
 
+    @Override
+    public Optional<User> findByExternalUserId(String externalUserId) {
+        return repository.findByExternalUserId(externalUserId)
+                .map(this::mapToDomain);
+    }
+
     private UserEntity mapToEntity(User user) {
         return UserEntity.builder()
                 .id(user.getId() != null ? user.getId().getValue() : null)
                 .email(user.getEmail())
                 .passwordHash(user.getPasswordHash())
                 .status(user.getStatus())
+                .externalProvider(user.getExternalProvider())
+                .externalUserId(user.getExternalUserId())
                 .build();
     }
 
@@ -42,6 +50,8 @@ public class JpaUserRepository implements UserRepository {
                 .email(entity.getEmail())
                 .passwordHash(entity.getPasswordHash())
                 .status(entity.getStatus())
+                .externalProvider(entity.getExternalProvider())
+                .externalUserId(entity.getExternalUserId())
                 .build();
     }
 }

@@ -10,4 +10,6 @@ public class User {
     private final String email;
     private final String passwordHash;
     private final String status;
+    private final String externalProvider;
+    private final String externalUserId;
 }
