@@ -61,13 +61,19 @@ The authentication module follows a multi-module pattern to support both interna
 - Supabase Project (for `auth-supabase`)
 
 ### Configuration
-For Supabase integration, update your `application.yml`:
-```yaml
-supabase:
-  jwt:
-    secret: "YOUR_JWT_SECRET"
-    issuer: "https://YOUR_PROJECT.supabase.co/auth/v1"
+For Supabase integration, provide the following environment variables in a `.env` file in the root directory:
+
+```env
+SUPABASE_AUTH_BASE_URL="https://your-project.supabase.co/auth/v1"
+SUPABASE_ANON_KEY="your-anon-key"
+SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
+SUPABASE_ISSUER_URI="https://your-project.supabase.co/auth/v1"
+DB_URL="jdbc:postgresql://localhost:5432/your-db"
+DB_USERNAME="your-username"
+DB_PASSWORD="your-password"
 ```
+
+The application will automatically load these from the `.env` file during `bootRun`.
 
 ### Running the App
 ```bash
@@ -96,16 +102,22 @@ supabase:
 
 ### Supabase Authentication (auth-supabase)
 
+#### User Login
+**POST** `/api/v1/auth/login`
+Authenticates a user with Supabase using email and password, returning tokens.
+
 #### Get Current User Info
-**GET** `/api/v1/auth/supabase/me`
+**GET** `/api/v1/auth/me`
 *Requires standard Supabase JWT in the `Authorization: Bearer <token>` header.*
+Synchronizes the user profile with the local database and returns the current user context.
 
 **Response**:
 ```json
 {
-  "id": "supabase-uuid",
+  "id": "local-uuid",
   "email": "user@example.com",
-  "claims": { ... }
+  "providerUserId": "supabase-uuid",
+  "status": "ACTIVE"
 }
 ```
 
