@@ -1,4 +1,4 @@
-package com.moneylane.modules.auth.common.domain;
+package com.moneylane.shared.kernel;
 
 import lombok.Value;
 import java.util.UUID;

@@ -14,67 +14,69 @@ import java.util.Optional;
 @Component
 public class SupabaseUserApiAdapter implements ExternalIdentityProviderPort {
 
-    private final WebClient webClient;
-    private final String serviceRoleKey;
-    private final String anonKey;
+        private final WebClient webClient;
+        private final String serviceRoleKey;
 
-    public SupabaseUserApiAdapter(
-            WebClient.Builder webClientBuilder,
-            @Value("${supabase.auth.base-url}") String authBaseUrl,
-            @Value("${supabase.admin.service-role-key}") String serviceRoleKey,
-            @Value("${supabase.auth.anon-key}") String anonKey) {
+        public SupabaseUserApiAdapter(
+                        WebClient.Builder webClientBuilder,
+                        @Value("${supabase.auth.base-url}") String authBaseUrl,
+                        @Value("${supabase.admin.service-role-key}") String serviceRoleKey) {
 
-        this.webClient = webClientBuilder.baseUrl(authBaseUrl).build();
-        this.serviceRoleKey = serviceRoleKey;
-        this.anonKey = anonKey;
-    }
+                this.webClient = webClientBuilder.baseUrl(authBaseUrl).build();
+                this.serviceRoleKey = serviceRoleKey;
+        }
 
-    @Override
-    public Optional<ExternalUserContext> getDetailedUser(String externalUserId) {
+        @Override
+        public Optional<ExternalUserContext> getDetailedUser(String externalUserId) {
 
-        return webClient.get()
-                .uri("/admin/users/{id}", externalUserId)
-                .header("Authorization", "Bearer " + serviceRoleKey)
-                .retrieve()
-                .bodyToMono(SupabaseUserResponse.class)
-                .map(resp -> new ExternalUserContext(
-                        resp.id(),
-                        resp.email(),
-                        resp.user_metadata() != null ? resp.user_metadata() : Map.of()))
-                .onErrorResume(ex -> Mono.empty())
-                .blockOptional();
-    }
+                return webClient.get()
+                                .uri("/admin/users/{id}", externalUserId)
+                                .header("Authorization", "Bearer " + serviceRoleKey)
+                                .retrieve()
+                                .bodyToMono(SupabaseUserResponse.class)
+                                .map(resp -> new ExternalUserContext(
+                                                resp.id(),
+                                                resp.email(),
+                                                resp.user_metadata() != null ? resp.user_metadata() : Map.of()))
+                                .onErrorResume(ex -> Mono.empty())
+                                .blockOptional();
+        }
 
-    @Override
-    public Optional<ExternalAuthenticationResult> authenticate(String email, String password) {
-        return webClient.post()
-                .uri("/token?grant_type=password")
-                .header("apikey", anonKey)
-                .bodyValue(Map.of("email", email, "password", password))
-                .retrieve()
-                .bodyToMono(SupabaseTokenResponse.class)
-                .map(resp -> new ExternalAuthenticationResult(
-                        resp.access_token(),
-                        resp.refresh_token(),
-                        resp.expires_in(),
-                        resp.user() != null ? new ExternalUserContext(
-                                resp.user().id(),
-                                resp.user().email(),
-                                resp.user().user_metadata() != null ? resp.user().user_metadata() : Map.of()) : null))
-                .onErrorResume(ex -> Mono.empty())
-                .blockOptional();
-    }
+        @Override
+        public Optional<ExternalAuthenticationResult> authenticate(String email, String password) {
+                return webClient.post()
+                                .uri("/token?grant_type=password")
+                                .bodyValue(Map.of("email", email, "password", password))
+                                .retrieve()
+                                .bodyToMono(SupabaseTokenResponse.class)
+                                .map(resp -> new ExternalAuthenticationResult(
+                                                resp.access_token(),
+                                                resp.refresh_token(),
+                                                resp.expires_in(),
+                                                new ExternalUserContext(
+                                                                resp.user().id(),
+                                                                resp.user().email(),
+                                                                resp.user().user_metadata() != null
+                                                                                ? resp.user().user_metadata()
+                                                                                : Map.of())))
+                                .onErrorResume(ex -> Mono.empty())
+                                .blockOptional();
+        }
 
-    private record SupabaseUserResponse(
-            String id,
-            String email,
-            Map<String, Object> user_metadata) {
-    }
+        /**
+         * Supabase Admin API response model
+         * Infrastructure-only DTO
+         */
+        private record SupabaseUserResponse(
+                        String id,
+                        String email,
+                        Map<String, Object> user_metadata) {
+        }
 
-    private record SupabaseTokenResponse(
-            String access_token,
-            String refresh_token,
-            long expires_in,
-            SupabaseUserResponse user) {
-    }
+        private record SupabaseTokenResponse(
+                        String access_token,
+                        String refresh_token,
+                        long expires_in,
+                        SupabaseUserResponse user) {
+        }
 }

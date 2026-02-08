@@ -5,7 +5,7 @@ import com.moneylane.modules.auth.common.application.port.out.ExternalIdentityPr
 import com.moneylane.modules.auth.common.application.port.out.ExternalUserContext;
 import com.moneylane.modules.auth.common.application.port.out.UserRepository;
 import com.moneylane.modules.auth.common.domain.User;
-import com.moneylane.modules.auth.common.domain.UserId;
+import com.moneylane.shared.kernel.UserId;
 import com.moneylane.modules.auth.supabase.application.port.in.LoginSupabaseUserUseCase;
 import com.moneylane.modules.auth.supabase.application.port.in.SyncSupabaseUserUseCase;
 import lombok.RequiredArgsConstructor;

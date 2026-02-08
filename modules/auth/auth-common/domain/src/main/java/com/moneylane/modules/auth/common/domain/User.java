@@ -1,5 +1,6 @@
 package com.moneylane.modules.auth.common.domain;
 
+import com.moneylane.shared.kernel.UserId;
 import lombok.*;
 
 @Getter
