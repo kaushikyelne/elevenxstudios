@@ -14,9 +14,9 @@ Simple Spring Boot 3.3 project structure with modular monolith and hexagonal arc
 
 ## Tech Stack
 
-- **Java**: 21 (configured for 20 in some environments)
+- **Java**: 21
 - **Spring Boot**: 3.3.0
-- **Gradle**: 9.3.1 (Kotlin DSL)
+- **Gradle**: 8.10 (Kotlin DSL)
 - **DB**: PostgreSQL with Flyway migrations
 - **Lombok**: Managed via `io.freefair.lombok` plugin
 
@@ -84,8 +84,15 @@ The application will automatically load these from the `.env` file during `bootR
 
 #### With Docker Compose
 Ensure you have a `.env` file with the required environment variables.
+
+To start the environment:
 ```bash
 docker-compose up --build
+```
+
+To stop and **reset** the database:
+```bash
+docker-compose down -v
 ```
 
 ## API Usage
