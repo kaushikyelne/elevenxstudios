@@ -17,7 +17,7 @@ public class SupabaseSecurityConfig {
         public SecurityFilterChain supabaseSecurityFilterChain(HttpSecurity http) throws Exception {
 
                 http
-                                .securityMatcher("/api/v1/auth/me", "/api/v1/protected/**")
+                                .securityMatcher("/api/v1/auth/me", "/api/v1/profile/me", "/api/v1/protected/**")
                                 .csrf(csrf -> csrf.disable())
                                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                                 .authorizeHttpRequests(auth -> auth

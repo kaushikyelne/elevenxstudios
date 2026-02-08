@@ -30,6 +30,7 @@ dependencies {
     implementation(project(":modules:transaction"))
     implementation(project(":modules:budget"))
     implementation(project(":modules:insight"))
+    implementation(project(":modules:profile"))
     implementation(project(":shared:kernel"))
     implementation(project(":shared:contracts"))
     implementation(project(":common:exception"))

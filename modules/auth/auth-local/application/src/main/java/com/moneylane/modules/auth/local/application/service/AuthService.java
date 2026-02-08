@@ -7,7 +7,7 @@ import com.moneylane.modules.auth.common.application.port.out.TokenServicePort;
 import com.moneylane.modules.auth.common.application.port.out.UserRepository;
 
 import com.moneylane.modules.auth.common.domain.User;
-import com.moneylane.modules.auth.common.domain.UserId;
+import com.moneylane.shared.kernel.UserId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
