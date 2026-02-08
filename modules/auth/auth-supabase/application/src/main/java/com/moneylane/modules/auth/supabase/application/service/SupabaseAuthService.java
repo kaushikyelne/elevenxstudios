@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -24,13 +25,7 @@ public class SupabaseAuthService implements SyncSupabaseUserUseCase, LoginSupaba
 
     @Override
     public Optional<ExternalAuthenticationResult> login(String email, String password) {
-        return externalIdentityProvider.authenticate(email, password)
-                .map(authResult -> {
-                    if (authResult.userContext() != null) {
-                        syncUser(authResult.userContext().externalUserId(), authResult.userContext().email());
-                    }
-                    return authResult;
-                });
+        return externalIdentityProvider.authenticate(email, password);
     }
 
     @Override
@@ -43,8 +38,7 @@ public class SupabaseAuthService implements SyncSupabaseUserUseCase, LoginSupaba
 
     private User onboardNewUser(String externalUserId, String email) {
 
-        ExternalUserContext externalUser = externalIdentityProvider.getDetailedUser(externalUserId)
-                .orElse(new ExternalUserContext(externalUserId, email, java.util.Map.of()));
+        ExternalUserContext externalUser = new ExternalUserContext(externalUserId, email, Map.of());
 
         User user = User.builder()
                 .id(new UserId(UUID.randomUUID()))
@@ -54,7 +48,6 @@ public class SupabaseAuthService implements SyncSupabaseUserUseCase, LoginSupaba
                 .status("ACTIVE")
                 .build();
 
-        userRepository.save(user);
-        return user;
+        return userRepository.save(user);
     }
 }

@@ -17,7 +17,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${SUPABASE_ISSUER_URI:https://placeholder.supabase.co/auth/v1}
+          issuer-uri: ${SUPABASE_ISSUER_URI:https://krqlxwqauosqxipqnodw.supabase.co/auth/v1}
 
 springdoc:
   api-docs:
@@ -37,7 +37,8 @@ server:
 
 supabase:
   auth:
-    base-url: ${SUPABASE_AUTH_BASE_URL:https://placeholder.supabase.co/auth/v1}
-    anon-key: ${SUPABASE_ANON_KEY:placeholder-anon-key}
+    base-url: ${SUPABASE_AUTH_BASE_URL:https://krqlxwqauosqxipqnodw.supabase.co/auth/v1}
+    anon-key: ${SUPABASE_ANON_KEY}
   admin:
-    service-role-key: ${SUPABASE_SERVICE_ROLE_KEY:placeholder-service-role-key}
+    service-role-key: ${SUPABASE_SERVICE_ROLE_KEY:sb_publishable_h3t7nZVgEcPg3zOBO2p2Kw_5iyjq-We}
+
