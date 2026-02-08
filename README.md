@@ -30,11 +30,12 @@ moneylane/
 │   │   ├── auth-common/  # Shared domain, ports, and common logic
 │   │   ├── auth-local/   # Native Username/Password & JWT implementation
 │   │   └── auth-supabase/# Supabase 3rd party authentication provider
+│   ├── profile/        # User Profile management (self-service)
 │   ├── transaction/    # Transaction management
 │   ├── budget/         # Budgeting logic
 │   └── insight/        # Analytics and reports
 ├── shared/
-│   ├── kernel/         # Core domain primitives (EntityId, etc.)
+│   ├── kernel/         # Core domain primitives (UserId, etc.)
 │   └── contracts/      # Cross-module communication contracts
 └── common/             # Utilities and global exception handling
 ```
@@ -52,6 +53,15 @@ The authentication module follows a multi-module pattern to support both interna
     - **External Auth**: Seamless integration with Supabase Auth.
     - **Stateless Validation**: Backend JWT validation using Supabase project secrets.
     - **Identity Mapping**: Unified endpoint for current user context.
+
+### Profile Module
+Self-service profile management following Hexagonal Architecture. Depends only on `UserId` from `shared:kernel`.
+
+- **Lazy Creation**: Profile auto-created on first access with sensible defaults.
+- **Self-Only Access**: Users can only view/modify their own profile (`/me` endpoints).
+- **JSONB Preferences**: Theme and notification settings stored efficiently.
+- **Mutable Fields**: `displayName`, `avatarUrl`, `preferences`
+- **Immutable Fields**: `userId`, `createdAt`
 
 ## Getting Started
 
@@ -133,6 +143,35 @@ Synchronizes the user profile with the local database and returns the current us
   "email": "user@example.com",
   "providerUserId": "supabase-uuid",
   "status": "ACTIVE"
+}
+```
+
+### Profile (profile)
+
+#### Get My Profile
+**GET** `/api/v1/profile/me`
+*Requires JWT in `Authorization: Bearer <token>` header.*
+Returns the authenticated user's profile. Auto-creates if not exists.
+
+**Response**:
+```json
+{
+  "userId": "a7ca2919-19a3-4b54-ab5d-5755c00049db",
+  "displayName": "Kaushik",
+  "avatarUrl": "https://example.com/avatar.png",
+  "preferences": { "theme": "dark", "notificationsEnabled": true }
+}
+```
+
+#### Update My Profile
+**PATCH** `/api/v1/profile/me`
+*Partial update — only provided fields are modified.*
+
+```json
+{
+  "displayName": "New Name",
+  "avatarUrl": "https://newurl.com/avatar.png",
+  "preferences": { "theme": "dark" }
 }
 ```
 
