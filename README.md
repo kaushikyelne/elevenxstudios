@@ -76,8 +76,16 @@ DB_PASSWORD="your-password"
 The application will automatically load these from the `.env` file during `bootRun`.
 
 ### Running the App
+
+#### Locally with Gradle
 ```bash
 ./gradlew :bootstrap:bootRun
+```
+
+#### With Docker Compose
+Ensure you have a `.env` file with the required environment variables.
+```bash
+docker-compose up --build
 ```
 
 ## API Usage

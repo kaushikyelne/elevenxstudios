@@ -17,11 +17,10 @@ public class SupabaseSecurityConfig {
         public SecurityFilterChain supabaseSecurityFilterChain(HttpSecurity http) throws Exception {
 
                 http
-                                .securityMatcher("/api/v1/auth/**", "/api/v1/protected/**")
+                                .securityMatcher("/api/v1/auth/me", "/api/v1/protected/**")
                                 .csrf(csrf -> csrf.disable())
                                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                                 .authorizeHttpRequests(auth -> auth
-                                                .requestMatchers("/api/v1/auth/login").permitAll()
                                                 .anyRequest().authenticated())
                                 .oauth2ResourceServer(oauth -> oauth.jwt());
 
