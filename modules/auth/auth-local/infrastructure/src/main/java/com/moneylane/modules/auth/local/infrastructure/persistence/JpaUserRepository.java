@@ -16,9 +16,10 @@ public class JpaUserRepository implements UserRepository {
     private final SpringDataUserRepository repository;
 
     @Override
-    public void save(User user) {
+    public User save(User user) {
         UserEntity entity = mapToEntity(user);
-        repository.save(entity);
+        UserEntity savedEntity = repository.save(entity);
+        return mapToDomain(savedEntity);
     }
 
     @Override
