@@ -77,19 +77,20 @@ Self-service profile management following Hexagonal Architecture. Designed for h
 - Supabase Project (for `auth-supabase`)
 
 ### Configuration
-For Supabase integration, provide the following environment variables in a `.env` file in the root directory:
 
-```env
-SUPABASE_AUTH_BASE_URL="https://your-project.supabase.co/auth/v1"
-SUPABASE_ANON_KEY="your-anon-key"
-SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
-SUPABASE_ISSUER_URI="https://your-project.supabase.co/auth/v1"
-DB_URL="jdbc:postgresql://localhost:5432/your-db"
-DB_USERNAME="your-username"
-DB_PASSWORD="your-password"
-```
+The application requires specific environment variables to link with Supabase and the database. Create a `.env` file in the root directory:
 
-The application will automatically load these from the `.env` file during `bootRun`.
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `SUPABASE_AUTH_BASE_URL` | Supabase Auth API URL | `https://xyz.supabase.co/auth/v1` |
+| `SUPABASE_ANON_KEY` | Public Anon Key | `your-anon-key` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Admin Service Role Key | `your-service-role-key` |
+| `SUPABASE_ISSUER_URI` | JWT Issuer URL | `https://xyz.supabase.co/auth/v1` |
+| `DB_URL` | PostgreSQL JDBC URL | `jdbc:postgresql://localhost:5432/moneylane` |
+| `DB_USERNAME` | Database User | `postgres` |
+| `DB_PASSWORD` | Database Password | `password` |
+
+The application automatically loads these from the `.env` file during `bootRun` or via `docker-compose`.
 
 ### Running the App
 
@@ -137,10 +138,10 @@ docker-compose down -v
 **POST** `/api/v1/auth/login`
 Authenticates a user with Supabase using email and password, returning tokens.
 
-#### Get Current User Info
+#### Get Current User Identity
 **GET** `/api/v1/auth/me`
-*Requires standard Supabase JWT in the `Authorization: Bearer <token>` header.*
-Synchronizes the user profile with the local database and returns the current user context.
+*Requires standard Supabase JWT.*
+Verifies the JWT and returns the **Identity Context** (User Account info). This ensures a record exists in the local `users` table for reference by other modules.
 
 **Response**:
 ```json
