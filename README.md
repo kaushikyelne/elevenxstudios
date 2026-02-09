@@ -5,12 +5,18 @@ Simple Spring Boot 3.3 project structure with modular monolith and hexagonal arc
 ## Architecture
 
 - **Monorepo**: All modules in a single repository.
-- **Modular Monolith**: Feature-based modules (Auth, Transaction, Budget, Insight).
+- **Modular Monolith**: Feature-based modules (Auth, Profile, Transaction, Budget, Insight).
 - **Hexagonal Architecture**: Strict separation of concerns using Ports & Adapters.
   - `domain`: Core business logic and entities (immutable).
   - `application`: Use cases and orchestration (Inbound/Outbound Ports).
   - `infrastructure`: Technical implementations (Persistence, Security, External APIs).
   - `api`: REST Controllers and DTOs.
+14: 
+15: ## Design Principles
+16: 
+17: - **Microservice-Ready**: Each module is designed to be easily extracted into a standalone service.
+18: - **Shared Kernel**: Common domain primitives (like `UserId`) are shared across modules to ensure consistency without coupling feature logic.
+19: - **Isolation**: Cross-module communication happens through defined ports or shared contracts.
 
 ## Tech Stack
 
@@ -55,7 +61,7 @@ The authentication module follows a multi-module pattern to support both interna
     - **Identity Mapping**: Unified endpoint for current user context.
 
 ### Profile Module
-Self-service profile management following Hexagonal Architecture. Depends only on `UserId` from `shared:kernel`.
+Self-service profile management following Hexagonal Architecture. Designed for high isolation; it depends only on `UserId` from `shared:kernel` and is **fully decoupled** from the Auth module's internal database.
 
 - **Lazy Creation**: Profile auto-created on first access with sensible defaults.
 - **Self-Only Access**: Users can only view/modify their own profile (`/me` endpoints).
@@ -177,4 +183,4 @@ Returns the authenticated user's profile. Auto-creates if not exists.
 
 ## Documentation
 - **Swagger UI**: [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
-- **Architecture Walkthrough**: [walkthrough.md](.gemini/antigravity/brain/f95c4d7a-fc15-4a80-a446-c815847811ce/walkthrough.md)
+- **Latest Implementation Documentation**: [Profile Walkthrough](.gemini/antigravity/brain/8a5bc8c8-4baa-4f97-a652-43fa78496c84/walkthrough.md)
