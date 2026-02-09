@@ -200,6 +200,32 @@ Each module contains its own sets of tests following the hexagonal layers.
   ./gradlew test
   ```
 
+## Development Workflow
+
+### Adding a New Module
+1. Creating a new folder in `modules/`.
+2. Register the module in `settings.gradle.kts`.
+3. Add a dependency on the module in `bootstrap/build.gradle.kts` if it's an entry point.
+4. Follow Hexagonal Architecture:
+   - `domain`: Pure Java objects.
+   - `application`: Business use cases and ports.
+   - `infrastructure`: Adapters for DB, Security, external APIs.
+   - `api`: Controllers and DTOs.
+
+## Troubleshooting
+
+### Docker Connectivity
+If the app cannot connect to the database:
+- Ensure `.env` has `DB_URL=jdbc:postgresql://db:5432/moneylane` (when running via Docker).
+- If running locally: `DB_URL=jdbc:postgresql://localhost:5432/moneylane`.
+
+### Flyway Migration Errors
+If migrations fail:
+- Reset the database: `docker-compose down -v && docker-compose up`.
+- Ensure SQL syntax is compatible with PostgreSQL.
+
 ## Documentation
 - **Swagger UI**: [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
-- **Latest Implementation Documentation**: [Profile Walkthrough](.gemini/antigravity/brain/8a5bc8c8-4baa-4f97-a652-43fa78496c84/walkthrough.md)
+- **Design & Implementation Docs**:
+  - [Profile Implementation Plan](docs/profile-implementation-plan.md)
+  - [Profile Walkthrough](docs/profile-walkthrough.md)
