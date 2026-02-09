@@ -11,12 +11,12 @@ Simple Spring Boot 3.3 project structure with modular monolith and hexagonal arc
   - `application`: Use cases and orchestration (Inbound/Outbound Ports).
   - `infrastructure`: Technical implementations (Persistence, Security, External APIs).
   - `api`: REST Controllers and DTOs.
-14: 
-15: ## Design Principles
-16: 
-17: - **Microservice-Ready**: Each module is designed to be easily extracted into a standalone service.
-18: - **Shared Kernel**: Common domain primitives (like `UserId`) are shared across modules to ensure consistency without coupling feature logic.
-19: - **Isolation**: Cross-module communication happens through defined ports or shared contracts.
+
+## Design Principles
+
+- **Microservice-Ready**: Each module is designed to be easily extracted into a standalone service.
+- **Shared Kernel**: Common domain primitives (like `UserId`) are shared across modules to ensure consistency without coupling feature logic.
+- **Isolation**: Cross-module communication happens through defined ports or shared contracts.
 
 ## Tech Stack
 
@@ -180,6 +180,24 @@ Returns the authenticated user's profile. Auto-creates if not exists.
   "preferences": { "theme": "dark" }
 }
 ```
+
+## Database Migrations
+
+This project uses **Flyway** for database schema management.
+- Migrations are located in: `modules/<module-name>/infrastructure/src/main/resources/db/migration`
+- Naming convention: `V<Number>__<Description>.sql` (e.g., `V5__create_user_profiles.sql`)
+- Migrations run automatically on application startup.
+
+## Testing
+
+Each module contains its own sets of tests following the hexagonal layers.
+
+- **Unit Tests**: Test core domain logic and application services with mocks.
+- **Integration Tests**: Test infrastructure adapters (Persistence/PostgreSQL) using `@DataJpaTest`.
+- **Run all tests**:
+  ```bash
+  ./gradlew test
+  ```
 
 ## Documentation
 - **Swagger UI**: [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
