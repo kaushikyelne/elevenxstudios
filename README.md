@@ -2,6 +2,8 @@
 
 Simple Spring Boot 3.3 project structure with modular monolith and hexagonal architecture.
 
+🚀 **Live API**: [api.moneylane.elevenxstudios.com](https://api.moneylane.elevenxstudios.com)
+
 ## Architecture
 
 - **Monorepo**: All modules in a single repository.
@@ -225,7 +227,9 @@ If migrations fail:
 - Ensure SQL syntax is compatible with PostgreSQL.
 
 ## Documentation
-- **Swagger UI**: [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
+- **Live Swagger UI**: [https://api.moneylane.elevenxstudios.com/swagger-ui/index.html](https://api.moneylane.elevenxstudios.com/swagger-ui/index.html)
+- **Local Swagger UI**: [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
 - **Design & Implementation Docs**:
   - [Profile Implementation Plan](docs/profile-implementation-plan.md)
   - [Profile Walkthrough](docs/profile-walkthrough.md)
+  - [Cloud Infrastructure & Deployment](docs/INFRASTRUCTURE.md)
