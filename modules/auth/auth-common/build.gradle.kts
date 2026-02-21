@@ -11,6 +11,14 @@ sourceSets {
             srcDirs("domain/src/main/resources", "application/src/main/resources")
         }
     }
+    test {
+        java {
+            srcDirs("domain/src/test/java", "application/src/test/java")
+        }
+        resources {
+            srcDirs("domain/src/test/resources", "application/src/test/resources")
+        }
+    }
 }
 
 dependencies {
