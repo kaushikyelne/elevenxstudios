@@ -29,17 +29,8 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Generate Gradle Wrapper
-        run: |
-          if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
-            gradle wrapper --gradle-version 8.10
-          fi
-
-      - name: Compile
-        run: ./gradlew classes --no-daemon
-
-      - name: Run Tests
-        run: ./gradlew test --no-daemon
+      - name: Build & Run Tests
+        run: ./gradlew build --no-daemon
 
       - name: Upload Test Reports
         if: always()
@@ -48,14 +39,3 @@ jobs:
           name: test-reports
           path: '**/build/reports/tests/'
           retention-days: 7
-
-      - name: Build Boot JAR
-        run: ./gradlew :bootstrap:bootJar --no-daemon
-
-      - name: Upload Boot JAR
-        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-        uses: actions/upload-artifact@v4
-        with:
-          name: moneylane-boot-jar
-          path: bootstrap/build/libs/*.jar
-          retention-days: 5
