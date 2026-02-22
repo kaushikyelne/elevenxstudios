@@ -55,15 +55,15 @@ jobs:
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy ${SERVICE_NAME} \
-            --project=${PROJECT_ID} \
-            --image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPO}/${IMAGE_NAME}:${IMAGE_TAG} \
-            --region=${REGION} \
-            --platform=managed \
+            --project="${PROJECT_ID}" \
+            --image="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPO}/${IMAGE_NAME}:${IMAGE_TAG}" \
+            --region="${REGION}" \
+            --platform="managed" \
             --allow-unauthenticated \
-            --revision-suffix=$(echo ${IMAGE_TAG} | cut -c1-7)-$(date +%s) \
-            --add-cloudsql-instances=moneylane-prod:us-central1:moneylane-db \
-            --update-env-vars=SPRING_PROFILES_ACTIVE=prod,DB_URL=${{ secrets.DB_URL }},DB_USERNAME=${{ secrets.DB_USERNAME }} \
-            --update-secrets=DB_PASSWORD=db-password:latest \
+            --revision-suffix="$(echo ${IMAGE_TAG} | cut -c1-7)-$(date +%s)" \
+            --add-cloudsql-instances="moneylane-prod:us-central1:moneylane-db" \
+            --update-env-vars="SPRING_PROFILES_ACTIVE=prod,DB_URL=${{ secrets.DB_URL }},DB_USERNAME=${{ secrets.DB_USERNAME }}" \
+            --update-secrets="DB_PASSWORD=db-password:latest" \
             --cpu=1 \
             --memory=512Mi \
             --min-instances=0 \
@@ -73,8 +73,8 @@ jobs:
       - name: Verify Deployment
         run: |
           SERVICE_URL=$(gcloud run services describe ${SERVICE_NAME} \
-            --project=${PROJECT_ID} \
-            --region=${REGION} \
+            --project="${PROJECT_ID}" \
+            --region="${REGION}" \
             --format='value(status.url)')
 
           if [ -z "$SERVICE_URL" ]; then
