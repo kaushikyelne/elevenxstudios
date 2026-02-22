@@ -55,6 +55,7 @@ jobs:
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy ${SERVICE_NAME} \
+            --project=${PROJECT_ID} \
             --image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPO}/${IMAGE_NAME}:${IMAGE_TAG} \
             --region=${REGION} \
             --platform=managed \
@@ -69,13 +70,28 @@ jobs:
 
       - name: Verify Deployment
         run: |
+          SERVICE_URL=$(gcloud run services describe ${SERVICE_NAME} \
+            --project=${PROJECT_ID} \
+            --region=${REGION} \
+            --format='value(status.url)')
+
+          if [ -z "$SERVICE_URL" ]; then
+            echo "❌ Failed to fetch service URL"
+            exit 1
+          fi
+
+          echo "Service URL: $SERVICE_URL"
+
+          sleep 5
+
           for i in {1..8}; do
-            if curl --fail --silent https://api.moneylane.elevenxstudios.com/actuator/health; then
+            if curl --fail --silent $SERVICE_URL/actuator/health; then
               echo "✅ Deployment healthy"
               exit 0
             fi
             echo "Attempt $i failed, retrying in 10s..."
             sleep 10
           done
+
           echo "❌ Health check failed after retries"
           exit 1
