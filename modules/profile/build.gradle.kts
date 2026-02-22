@@ -7,6 +7,14 @@ sourceSets {
             srcDirs("domain/src/main/resources", "application/src/main/resources", "infrastructure/src/main/resources", "api/src/main/resources")
         }
     }
+    test {
+        java {
+            srcDirs("domain/src/test/java", "application/src/test/java", "infrastructure/src/test/java", "api/src/test/java")
+        }
+        resources {
+            srcDirs("domain/src/test/resources", "application/src/test/resources", "infrastructure/src/test/resources", "api/src/test/resources")
+        }
+    }
 }
 
 dependencies {

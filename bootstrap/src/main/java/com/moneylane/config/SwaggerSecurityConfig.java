@@ -17,7 +17,8 @@ public class SwaggerSecurityConfig {
     @Order(0)
     public SecurityFilterChain swaggerSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/api-docs/**")
+                .securityMatcher("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/api-docs/**",
+                        "/actuator/health")
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
