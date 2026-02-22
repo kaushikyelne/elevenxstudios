@@ -61,7 +61,7 @@ jobs:
             --platform=managed \
             --allow-unauthenticated \
             --revision-suffix=${IMAGE_TAG::7} \
-            --set-env-vars=SPRING_PROFILES_ACTIVE=prod \
+            --update-env-vars=SPRING_PROFILES_ACTIVE=prod \
             --cpu=1 \
             --memory=512Mi \
             --min-instances=0 \
