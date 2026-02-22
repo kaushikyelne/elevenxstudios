@@ -1,0 +1,97 @@
+name: CD
+
+on:
+  push:
+    branches:
+      - master
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    permissions:
+      contents: read
+      id-token: write
+
+    env:
+      PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+      REGION: ${{ secrets.GCP_REGION }}
+      ARTIFACT_REPO: ${{ secrets.GCP_ARTIFACT_REPO }}
+      SERVICE_NAME: ${{ secrets.CLOUD_RUN_SERVICE }}
+      IMAGE_NAME: moneylane-api
+      IMAGE_TAG: ${{ github.sha }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker
+        run: gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            -t ${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPO}/${IMAGE_NAME}:${IMAGE_TAG} \
+            .
+
+      - name: Push Docker image
+        run: |
+          docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPO}/${IMAGE_NAME}:${IMAGE_TAG}
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${SERVICE_NAME} \
+            --project=${PROJECT_ID} \
+            --image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPO}/${IMAGE_NAME}:${IMAGE_TAG} \
+            --region=${REGION} \
+            --platform=managed \
+            --allow-unauthenticated \
+            --revision-suffix=${IMAGE_TAG::7} \
+            --set-env-vars=SPRING_PROFILES_ACTIVE=prod \
+            --cpu=1 \
+            --memory=512Mi \
+            --min-instances=0 \
+            --max-instances=10 \
+            --quiet
+
+      - name: Verify Deployment
+        run: |
+          SERVICE_URL=$(gcloud run services describe ${SERVICE_NAME} \
+            --project=${PROJECT_ID} \
+            --region=${REGION} \
+            --format='value(status.url)')
+
+          if [ -z "$SERVICE_URL" ]; then
+            echo "❌ Failed to fetch service URL"
+            exit 1
+          fi
+
+          echo "Service URL: $SERVICE_URL"
+
+          sleep 5
+
+          for i in {1..8}; do
+            if curl --fail --silent $SERVICE_URL/actuator/health; then
+              echo "✅ Deployment healthy"
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying in 10s..."
+            sleep 10
+          done
+
+          echo "❌ Health check failed after retries"
+          exit 1
