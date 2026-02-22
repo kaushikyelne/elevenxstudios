@@ -61,8 +61,9 @@ jobs:
             --platform=managed \
             --allow-unauthenticated \
             --revision-suffix=${IMAGE_TAG::7} \
-            --update-env-vars=SPRING_PROFILES_ACTIVE=prod,DB_URL=${{ secrets.DB_URL }},DB_USERNAME=${{ secrets.DB_USERNAME }} \
+            --update-env-vars=SPRING_PROFILES_ACTIVE=prod,DB_URL=jdbc:postgresql://localhost:5432/moneylane,DB_USERNAME=${{ secrets.DB_USERNAME }} \
             --update-secrets=DB_PASSWORD=db-password:latest \
+            --add-cloudsql-instances=moneylane-prod:us-central1:moneylane-db \
             --cpu=1 \
             --memory=512Mi \
             --min-instances=0 \
