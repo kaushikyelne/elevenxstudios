@@ -202,6 +202,45 @@ Each module contains its own sets of tests following the hexagonal layers.
   ./gradlew test
   ```
 
+## CI/CD
+
+### CI — Continuous Integration
+Every pull request to `master` or `develop` triggers an automated build and test pipeline.
+
+- **Workflow**: `.github/workflows/ci.yml`
+- **Steps**: Checkout → JDK 21 → Gradle (cached) → `./gradlew build` → Upload test reports
+- **Test Reports**: Available as downloadable artifacts in GitHub Actions
+
+### CD — Continuous Deployment
+Merges to `master` trigger an automated deployment to **GCP Cloud Run**.
+
+- **Workflow**: `.github/workflows/cd.yml`
+- **Auth**: Workload Identity Federation (OIDC) — no long-lived credentials
+- **Image Registry**: GCP Artifact Registry (tagged with git SHA)
+- **Database**: Cloud SQL via proxy, credentials from Secret Manager
+- **Health Gate**: Retry-based verification via `/actuator/health`
+
+### Required GitHub Secrets
+
+| Secret | Description |
+|--------|-------------|
+| `GCP_PROJECT_ID` | Google Cloud project ID |
+| `GCP_REGION` | Deployment region (e.g., `us-central1`) |
+| `GCP_ARTIFACT_REPO` | Artifact Registry repository name |
+| `CLOUD_RUN_SERVICE` | Cloud Run service name |
+| `WIF_PROVIDER` | Workload Identity Federation provider |
+| `WIF_SERVICE_ACCOUNT` | GCP service account for deployments |
+| `DB_URL` | Production database JDBC URL |
+| `DB_USERNAME` | Production database username |
+
+> **Note**: `DB_PASSWORD` is managed via GCP Secret Manager (`db-password`), not GitHub Secrets.
+
+### Health Check
+```bash
+curl https://api.moneylane.elevenxstudios.com/actuator/health
+# → {"status":"UP"}
+```
+
 ## Development Workflow
 
 ### Adding a New Module
