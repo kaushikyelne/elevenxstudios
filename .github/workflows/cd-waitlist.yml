@@ -1,0 +1,99 @@
+name: CD Waitlist
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'services/waitlist/**'
+
+concurrency:
+  group: cd-waitlist-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      contents: read
+      id-token: write
+
+    env:
+      PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+      REGION: ${{ secrets.GCP_REGION }}
+      ARTIFACT_REPO: ${{ secrets.GCP_ARTIFACT_REPO }}
+      SERVICE_NAME: waitlist-service
+      IMAGE_NAME: waitlist-api
+      IMAGE_TAG: ${{ github.sha }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker
+        run: gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            -t ${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPO}/${IMAGE_NAME}:${IMAGE_TAG} \
+            services/waitlist/
+
+      - name: Push Docker image
+        run: |
+          docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPO}/${IMAGE_NAME}:${IMAGE_TAG}
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${SERVICE_NAME} \
+            --project="${PROJECT_ID}" \
+            --image="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPO}/${IMAGE_NAME}:${IMAGE_TAG}" \
+            --region="${REGION}" \
+            --platform="managed" \
+            --allow-unauthenticated \
+            --revision-suffix="$(echo ${IMAGE_TAG} | cut -c1-7)-$(date +%s)" \
+            --add-cloudsql-instances="moneylane-prod:us-central1:moneylane-db" \
+            --update-env-vars="CORS_ORIGINS=https://moneylane.elevenxstudios.com" \
+            --update-secrets="DATABASE_URL=waitlist-database-url:latest" \
+            --cpu=1 \
+            --memory=256Mi \
+            --min-instances=0 \
+            --max-instances=5 \
+            --quiet
+
+      - name: Verify Deployment
+        run: |
+          SERVICE_URL=$(gcloud run services describe ${SERVICE_NAME} \
+            --project="${PROJECT_ID}" \
+            --region="${REGION}" \
+            --format='value(status.url)')
+
+          if [ -z "$SERVICE_URL" ]; then
+            echo "❌ Failed to fetch service URL"
+            exit 1
+          fi
+
+          echo "Service URL: $SERVICE_URL"
+          sleep 5
+
+          for i in {1..5}; do
+            if curl --fail --silent "$SERVICE_URL/api/v1/waitlist/health"; then
+              echo "✅ Waitlist service healthy"
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying in 5s..."
+            sleep 5
+          done
+
+          echo "❌ Health check failed after retries"
+          exit 1
