@@ -2,6 +2,7 @@ import logging
 
 import httpx
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -14,6 +15,7 @@ async def join_waitlist(db: AsyncSession, email: str) -> tuple[WaitlistEntry, bo
     """Join the waitlist. Returns (entry, is_new).
 
     Idempotent — duplicate email returns the existing entry.
+    Handles race conditions via IntegrityError catch.
     """
     normalized = email.lower().strip()
 
@@ -26,10 +28,19 @@ async def join_waitlist(db: AsyncSession, email: str) -> tuple[WaitlistEntry, bo
     if existing:
         return existing, False
 
-    entry = WaitlistEntry(email=normalized)
-    db.add(entry)
-    await db.commit()
-    await db.refresh(entry)
+    try:
+        entry = WaitlistEntry(email=normalized)
+        db.add(entry)
+        await db.commit()
+        await db.refresh(entry)
+    except IntegrityError:
+        # Race condition: another request inserted the same email between
+        # our SELECT and INSERT. Roll back and fetch the existing entry.
+        await db.rollback()
+        result = await db.execute(
+            select(WaitlistEntry).where(func.lower(WaitlistEntry.email) == normalized)
+        )
+        return result.scalar_one(), False
 
     # Fire-and-forget notification (post-commit)
     await _notify(normalized)
