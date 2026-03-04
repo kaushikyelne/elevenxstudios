@@ -42,6 +42,8 @@ moneylane/
 │   ├── transaction/    # Transaction management
 │   ├── budget/         # Budgeting logic
 │   └── insight/        # Analytics and reports
+├── services/
+│   └── waitlist/       # Pre-launch waitlist microservice (Python/FastAPI)
 ├── shared/
 │   ├── kernel/         # Core domain primitives (UserId, etc.)
 │   └── contracts/      # Cross-module communication contracts
@@ -70,6 +72,31 @@ Self-service profile management following Hexagonal Architecture. Designed for h
 - **JSONB Preferences**: Theme and notification settings stored efficiently.
 - **Mutable Fields**: `displayName`, `avatarUrl`, `preferences`
 - **Immutable Fields**: `userId`, `createdAt`
+
+## Standalone Services
+
+### Waitlist Service
+Minimal FastAPI microservice for pre-launch email collection. Deployed as a standalone Cloud Run service, sharing the same Cloud SQL instance (`waitlist` schema).
+
+- **Stack**: Python 3.12 · FastAPI · SQLAlchemy (async) · asyncpg · Alembic
+- **Live**: `https://waitlist-service-972358167214.us-central1.run.app`
+- **Docs**: `https://waitlist-service-972358167214.us-central1.run.app/docs`
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/waitlist/join` | POST | Submit email to join waitlist (idempotent, case-insensitive dedup) |
+| `/api/v1/waitlist/health` | GET | Health check |
+| `/api/v1/waitlist/count` | GET | Total signups count |
+
+#### Join Waitlist
+**POST** `/api/v1/waitlist/join`
+```json
+{"email": "user@example.com"}
+```
+**Response**:
+```json
+{"message": "Welcome to the waitlist!", "email": "user@example.com", "created_at": "2026-03-03T10:44:24Z"}
+```
 
 ## Getting Started
 
@@ -212,13 +239,16 @@ Every pull request to `master` or `develop` triggers an automated build and test
 - **Test Reports**: Available as downloadable artifacts in GitHub Actions
 
 ### CD — Continuous Deployment
-Merges to `master` trigger an automated deployment to **GCP Cloud Run**.
+Merges to `master` trigger automated deployments to **GCP Cloud Run**.
 
-- **Workflow**: `.github/workflows/cd.yml`
+- **Main API** (`.github/workflows/cd.yml`): Deploys the Java monolith after CI passes
+- **Waitlist Service** (`.github/workflows/cd-waitlist.yml`): Deploys on `services/waitlist/**` changes
+
+**Shared Infrastructure**:
 - **Auth**: Workload Identity Federation (OIDC) — no long-lived credentials
 - **Image Registry**: GCP Artifact Registry (tagged with git SHA)
 - **Database**: Cloud SQL via proxy, credentials from Secret Manager
-- **Health Gate**: Retry-based verification via `/actuator/health`
+- **Health Gate**: Retry-based verification
 
 ### Required GitHub Secrets
 
@@ -234,6 +264,8 @@ Merges to `master` trigger an automated deployment to **GCP Cloud Run**.
 | `DB_USERNAME` | Production database username |
 
 > **Note**: `DB_PASSWORD` is managed via GCP Secret Manager (`db-password`), not GitHub Secrets.
+>
+> The waitlist service uses `waitlist-database-url` in Secret Manager for its `DATABASE_URL`.
 
 ### Health Check
 ```bash
