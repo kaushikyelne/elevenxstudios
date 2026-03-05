@@ -114,6 +114,7 @@ graph TB
 - **AI/Financial**: Python 3.11-3.12, FastAPI, SQLModel, Gemini 2.0 Flash
 - **Messaging**: Go 1.22, Brevo REST API
 - **Persistence**: PostgreSQL, Flyway, Alembic
+- **Testing**: JUnit 5, Pytest, LLM-as-a-Judge (Evaluation Suite)
 - **Platform**: GCP Cloud Run, Cloud SQL, Secret Manager, Workload Identity
 
 ---
