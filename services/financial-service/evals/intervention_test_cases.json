@@ -1,0 +1,584 @@
+[
+  {
+    "id": "case_01",
+    "description": "Soft block — Food category is blocked, transaction goes through",
+    "alert_type": "soft_block",
+    "input": {
+      "category": "Food",
+      "monthly_budget": 5000,
+      "spent_so_far": 2000,
+      "days_elapsed": 15,
+      "daily_limit": null,
+      "is_blocked": true,
+      "transaction_amount": 350
+    },
+    "expected": {
+      "triggered": true,
+      "severity": ["high"],
+      "must_contain": ["₹", "freeze", "Food"],
+      "must_not_contain": ["undefined", "null", "None"],
+      "tone": "warning",
+      "has_action": true
+    },
+    "metadata": { "prompt_version": "v1_loss_frame" }
+  },
+  {
+    "id": "case_02",
+    "description": "Soft block — Shopping is blocked, small transaction",
+    "alert_type": "soft_block",
+    "input": {
+      "category": "Shopping",
+      "monthly_budget": 8000,
+      "spent_so_far": 1000,
+      "days_elapsed": 5,
+      "daily_limit": null,
+      "is_blocked": true,
+      "transaction_amount": 199
+    },
+    "expected": {
+      "triggered": true,
+      "severity": ["high"],
+      "must_contain": ["₹", "Shopping"],
+      "must_not_contain": ["undefined", "null"],
+      "tone": "warning",
+      "has_action": true
+    },
+    "metadata": { "prompt_version": "v1_loss_frame" }
+  },
+  {
+    "id": "case_03",
+    "description": "Soft block — Entertainment blocked, large transaction",
+    "alert_type": "soft_block",
+    "input": {
+      "category": "Entertainment",
+      "monthly_budget": 3000,
+      "spent_so_far": 500,
+      "days_elapsed": 10,
+      "daily_limit": null,
+      "is_blocked": true,
+      "transaction_amount": 999
+    },
+    "expected": {
+      "triggered": true,
+      "severity": ["high"],
+      "must_contain": ["₹", "Entertainment"],
+      "must_not_contain": ["undefined", "null"],
+      "tone": "warning",
+      "has_action": true
+    },
+    "metadata": { "prompt_version": "v1_loss_frame" }
+  },
+  {
+    "id": "case_04",
+    "description": "Soft block — Transport blocked, tiny transaction",
+    "alert_type": "soft_block",
+    "input": {
+      "category": "Transport",
+      "monthly_budget": 4000,
+      "spent_so_far": 3800,
+      "days_elapsed": 28,
+      "daily_limit": null,
+      "is_blocked": true,
+      "transaction_amount": 50
+    },
+    "expected": {
+      "triggered": true,
+      "severity": ["high"],
+      "must_contain": ["₹", "Transport"],
+      "must_not_contain": ["undefined", "null"],
+      "tone": "warning",
+      "has_action": true
+    },
+    "metadata": { "prompt_version": "v1_loss_frame" }
+  },
+  {
+    "id": "case_05",
+    "description": "Daily limit breach — mild overage (10% over limit)",
+    "alert_type": "daily_limit_breach",
+    "input": {
+      "category": "Food",
+      "monthly_budget": 6000,
+      "spent_so_far": 2500,
+      "days_elapsed": 15,
+      "daily_limit": 300,
+      "is_blocked": false,
+      "transaction_amount": 200,
+      "prior_today_spend": 200
+    },
+    "expected": {
+      "triggered": true,
+      "severity": ["high"],
+      "must_contain": ["₹", "today", "Food"],
+      "must_not_contain": ["undefined", "null"],
+      "tone": "loss_framed",
+      "has_action": true
+    },
+    "metadata": { "prompt_version": "v1_loss_frame" }
+  },
+  {
+    "id": "case_06",
+    "description": "Daily limit breach — moderate (50% over limit)",
+    "alert_type": "daily_limit_breach",
+    "input": {
+      "category": "Shopping",
+      "monthly_budget": 10000,
+      "spent_so_far": 4000,
+      "days_elapsed": 12,
+      "daily_limit": 400,
+      "is_blocked": false,
+      "transaction_amount": 300,
+      "prior_today_spend": 300
+    },
+    "expected": {
+      "triggered": true,
+      "severity": ["high"],
+      "must_contain": ["₹", "limit"],
+      "must_not_contain": ["undefined", "null"],
+      "tone": "loss_framed",
+      "has_action": true
+    },
+    "metadata": { "prompt_version": "v1_loss_frame" }
+  },
+  {
+    "id": "case_07",
+    "description": "Daily limit breach — severe (2x daily limit)",
+    "alert_type": "daily_limit_breach",
+    "input": {
+      "category": "Food",
+      "monthly_budget": 5000,
+      "spent_so_far": 3000,
+      "days_elapsed": 20,
+      "daily_limit": 200,
+      "is_blocked": false,
+      "transaction_amount": 250,
+      "prior_today_spend": 200
+    },
+    "expected": {
+      "triggered": true,
+      "severity": ["high"],
+      "must_contain": ["₹", "over", "daily"],
+      "must_not_contain": ["undefined", "null"],
+      "tone": "loss_framed",
+      "has_action": true
+    },
+    "metadata": { "prompt_version": "v1_loss_frame" }
+  },
+  {
+    "id": "case_08",
+    "description": "Daily limit breach — small budget, tiny amounts (daily limit ₹50)",
+    "alert_type": "daily_limit_breach",
+    "input": {
+      "category": "Transport",
+      "monthly_budget": 1500,
+      "spent_so_far": 900,
+      "days_elapsed": 18,
+      "daily_limit": 50,
+      "is_blocked": false,
+      "transaction_amount": 80,
+      "prior_today_spend": 30
+    },
+    "expected": {
+      "triggered": true,
+      "severity": ["high"],
+      "must_contain": ["₹"],
+      "must_not_contain": ["undefined", "null"],
+      "tone": "loss_framed",
+      "has_action": true
+    },
+    "metadata": { "prompt_version": "v1_loss_frame" }
+  },
+  {
+    "id": "case_09",
+    "description": "Daily limit breach — large budget (₹500k/month, daily ₹20k)",
+    "alert_type": "daily_limit_breach",
+    "input": {
+      "category": "Shopping",
+      "monthly_budget": 500000,
+      "spent_so_far": 200000,
+      "days_elapsed": 12,
+      "daily_limit": 20000,
+      "is_blocked": false,
+      "transaction_amount": 15000,
+      "prior_today_spend": 15000
+    },
+    "expected": {
+      "triggered": true,
+      "severity": ["high"],
+      "must_contain": ["₹"],
+      "must_not_contain": ["undefined", "null"],
+      "tone": "loss_framed",
+      "has_action": true
+    },
+    "metadata": { "prompt_version": "v1_loss_frame" }
+  },
+  {
+    "id": "case_10",
+    "description": "Overspend warning — pace 1.0–1.5x, MEDIUM severity",
+    "alert_type": "overspend_warning",
+    "input": {
+      "category": "Food",
+      "monthly_budget": 6000,
+      "spent_so_far": 3200,
+      "days_elapsed": 16,
+      "daily_limit": null,
+      "is_blocked": false,
+      "transaction_amount": 200
+    },
+    "expected": {
+      "triggered": true,
+      "severity": ["medium", "high"],
+      "must_contain": ["₹", "Food"],
+      "must_not_contain": ["undefined", "null"],
+      "tone": "loss_framed",
+      "has_action": true
+    },
+    "metadata": { "prompt_version": "v1_loss_frame" }
+  },
+  {
+    "id": "case_11",
+    "description": "Overspend warning — pace 1.5–2.0x, HIGH severity, 10 days left",
+    "alert_type": "overspend_warning",
+    "input": {
+      "category": "Food",
+      "monthly_budget": 5000,
+      "spent_so_far": 4000,
+      "days_elapsed": 20,
+      "daily_limit": null,
+      "is_blocked": false,
+      "transaction_amount": 300
+    },
+    "expected": {
+      "triggered": true,
+      "severity": ["high", "critical"],
+      "must_contain": ["₹", "waste", "Food"],
+      "must_not_contain": ["undefined", "null"],
+      "tone": "loss_framed",
+      "has_action": true
+    },
+    "metadata": { "prompt_version": "v1_loss_frame" }
+  },
+  {
+    "id": "case_12",
+    "description": "Overspend warning — pace >2.0x, CRITICAL severity",
+    "alert_type": "overspend_warning",
+    "input": {
+      "category": "Shopping",
+      "monthly_budget": 8000,
+      "spent_so_far": 7500,
+      "days_elapsed": 15,
+      "daily_limit": null,
+      "is_blocked": false,
+      "transaction_amount": 500
+    },
+    "expected": {
+      "triggered": true,
+      "severity": ["critical"],
+      "must_contain": ["₹", "Shopping"],
+      "must_not_contain": ["undefined", "null"],
+      "tone": "loss_framed",
+      "has_action": true
+    },
+    "metadata": { "prompt_version": "v1_loss_frame" }
+  },
+  {
+    "id": "case_13",
+    "description": "Overspend warning — already over budget (used_pct > 100%)",
+    "alert_type": "overspend_warning",
+    "input": {
+      "category": "Entertainment",
+      "monthly_budget": 3000,
+      "spent_so_far": 3500,
+      "days_elapsed": 22,
+      "daily_limit": null,
+      "is_blocked": false,
+      "transaction_amount": 100
+    },
+    "expected": {
+      "triggered": true,
+      "severity": ["critical"],
+      "must_contain": ["₹", "Entertainment"],
+      "must_not_contain": ["undefined", "null"],
+      "tone": "loss_framed",
+      "has_action": true
+    },
+    "metadata": { "prompt_version": "v1_loss_frame" }
+  },
+  {
+    "id": "case_14",
+    "description": "Overspend warning — edge: day 1 of month, pace already >1x",
+    "alert_type": "overspend_warning",
+    "input": {
+      "category": "Food",
+      "monthly_budget": 3000,
+      "spent_so_far": 200,
+      "days_elapsed": 1,
+      "daily_limit": null,
+      "is_blocked": false,
+      "transaction_amount": 200
+    },
+    "expected": {
+      "triggered": true,
+      "severity": ["medium", "high", "critical"],
+      "must_contain": ["₹"],
+      "must_not_contain": ["undefined", "null", "NaN", "inf"],
+      "tone": "loss_framed",
+      "has_action": true
+    },
+    "metadata": { "prompt_version": "v1_loss_frame" }
+  },
+  {
+    "id": "case_15",
+    "description": "Overspend warning — edge: last day of month (days_remaining=1)",
+    "alert_type": "overspend_warning",
+    "input": {
+      "category": "Transport",
+      "monthly_budget": 4000,
+      "spent_so_far": 3800,
+      "days_elapsed": 30,
+      "daily_limit": null,
+      "is_blocked": false,
+      "transaction_amount": 120
+    },
+    "expected": {
+      "triggered": true,
+      "severity": ["high", "critical"],
+      "must_contain": ["₹"],
+      "must_not_contain": ["undefined", "null"],
+      "tone": "loss_framed",
+      "has_action": true
+    },
+    "metadata": { "prompt_version": "v1_loss_frame" }
+  },
+  {
+    "id": "case_16",
+    "description": "Overspend warning — HIGH severity 85–100% budget used, 8 days left",
+    "alert_type": "overspend_warning",
+    "input": {
+      "category": "Food",
+      "monthly_budget": 6000,
+      "spent_so_far": 5200,
+      "days_elapsed": 22,
+      "daily_limit": null,
+      "is_blocked": false,
+      "transaction_amount": 400
+    },
+    "expected": {
+      "triggered": true,
+      "severity": ["high", "critical"],
+      "must_contain": ["₹", "Food"],
+      "must_not_contain": ["undefined", "null"],
+      "tone": "loss_framed",
+      "has_action": true
+    },
+    "metadata": { "prompt_version": "v1_loss_frame" }
+  },
+  {
+    "id": "case_17",
+    "description": "Overspend warning — 60–85% used, MEDIUM pace",
+    "alert_type": "overspend_warning",
+    "input": {
+      "category": "Shopping",
+      "monthly_budget": 10000,
+      "spent_so_far": 7500,
+      "days_elapsed": 20,
+      "daily_limit": null,
+      "is_blocked": false,
+      "transaction_amount": 500
+    },
+    "expected": {
+      "triggered": true,
+      "severity": ["medium", "high"],
+      "must_contain": ["₹"],
+      "must_not_contain": ["undefined", "null"],
+      "tone": "loss_framed",
+      "has_action": true
+    },
+    "metadata": { "prompt_version": "v1_loss_frame" }
+  },
+  {
+    "id": "case_18",
+    "description": "No intervention — LOW severity, well within budget",
+    "alert_type": "none",
+    "input": {
+      "category": "Food",
+      "monthly_budget": 10000,
+      "spent_so_far": 1000,
+      "days_elapsed": 15,
+      "daily_limit": null,
+      "is_blocked": false,
+      "transaction_amount": 100
+    },
+    "expected": {
+      "triggered": false,
+      "severity": [],
+      "must_contain": [],
+      "must_not_contain": [],
+      "tone": "none",
+      "has_action": false
+    },
+    "metadata": { "prompt_version": "v1_loss_frame" }
+  },
+  {
+    "id": "case_19",
+    "description": "No intervention — no budget set for category",
+    "alert_type": "none",
+    "input": {
+      "category": "Groceries",
+      "monthly_budget": null,
+      "spent_so_far": 0,
+      "days_elapsed": 10,
+      "daily_limit": null,
+      "is_blocked": false,
+      "transaction_amount": 500
+    },
+    "expected": {
+      "triggered": false,
+      "severity": [],
+      "must_contain": [],
+      "must_not_contain": [],
+      "tone": "none",
+      "has_action": false
+    },
+    "metadata": { "prompt_version": "v1_loss_frame" }
+  },
+  {
+    "id": "case_20",
+    "description": "No intervention — budget at exactly 60%, LOW severity",
+    "alert_type": "none",
+    "input": {
+      "category": "Entertainment",
+      "monthly_budget": 5000,
+      "spent_so_far": 3000,
+      "days_elapsed": 20,
+      "daily_limit": null,
+      "is_blocked": false,
+      "transaction_amount": 200
+    },
+    "expected": {
+      "triggered": false,
+      "severity": [],
+      "must_contain": [],
+      "must_not_contain": [],
+      "tone": "none",
+      "has_action": false
+    },
+    "metadata": { "prompt_version": "v1_loss_frame" }
+  },
+  {
+    "id": "case_21",
+    "description": "ADVERSARIAL — spent > budget on day 1 (no division by zero / NaN)",
+    "alert_type": "overspend_warning",
+    "input": {
+      "category": "Food",
+      "monthly_budget": 3000,
+      "spent_so_far": 3500,
+      "days_elapsed": 1,
+      "daily_limit": null,
+      "is_blocked": false,
+      "transaction_amount": 3500
+    },
+    "expected": {
+      "triggered": true,
+      "severity": ["critical"],
+      "must_contain": ["₹"],
+      "must_not_contain": ["undefined", "null", "NaN", "inf", "Error"],
+      "tone": "loss_framed",
+      "has_action": true
+    },
+    "metadata": { "prompt_version": "v1_loss_frame", "adversarial": true }
+  },
+  {
+    "id": "case_22",
+    "description": "ADVERSARIAL — extremely large transaction (₹5,00,000) on small budget",
+    "alert_type": "overspend_warning",
+    "input": {
+      "category": "Shopping",
+      "monthly_budget": 10000,
+      "spent_so_far": 500000,
+      "days_elapsed": 5,
+      "daily_limit": null,
+      "is_blocked": false,
+      "transaction_amount": 500000
+    },
+    "expected": {
+      "triggered": true,
+      "severity": ["critical"],
+      "must_contain": ["₹"],
+      "must_not_contain": ["undefined", "null", "NaN", "inf"],
+      "tone": "loss_framed",
+      "has_action": true
+    },
+    "metadata": { "prompt_version": "v1_loss_frame", "adversarial": true }
+  },
+  {
+    "id": "case_23",
+    "description": "ADVERSARIAL — cooldown spam: same alert type fired twice, second must be suppressed",
+    "alert_type": "overspend_warning",
+    "input": {
+      "category": "Food",
+      "monthly_budget": 5000,
+      "spent_so_far": 4800,
+      "days_elapsed": 25,
+      "daily_limit": null,
+      "is_blocked": false,
+      "transaction_amount": 300,
+      "repeat_call": true
+    },
+    "expected": {
+      "triggered": false,
+      "severity": [],
+      "must_contain": [],
+      "must_not_contain": [],
+      "tone": "none",
+      "has_action": false
+    },
+    "metadata": { "prompt_version": "v1_loss_frame", "adversarial": true }
+  },
+  {
+    "id": "case_24",
+    "description": "ADVERSARIAL — zero budget (limit_amount = 0), should return no intervention",
+    "alert_type": "none",
+    "input": {
+      "category": "Food",
+      "monthly_budget": 0,
+      "spent_so_far": 500,
+      "days_elapsed": 10,
+      "daily_limit": null,
+      "is_blocked": false,
+      "transaction_amount": 100
+    },
+    "expected": {
+      "triggered": false,
+      "severity": [],
+      "must_contain": [],
+      "must_not_contain": [],
+      "tone": "none",
+      "has_action": false
+    },
+    "metadata": { "prompt_version": "v1_loss_frame", "adversarial": true }
+  },
+  {
+    "id": "case_25",
+    "description": "ADVERSARIAL — very high daily limit breach at end of month (days_remaining close to 0)",
+    "alert_type": "daily_limit_breach",
+    "input": {
+      "category": "Transport",
+      "monthly_budget": 4000,
+      "spent_so_far": 3990,
+      "days_elapsed": 30,
+      "daily_limit": 100,
+      "is_blocked": false,
+      "transaction_amount": 500,
+      "prior_today_spend": 500
+    },
+    "expected": {
+      "triggered": true,
+      "severity": ["high"],
+      "must_contain": ["₹"],
+      "must_not_contain": ["undefined", "null", "NaN", "inf"],
+      "tone": "loss_framed",
+      "has_action": true
+    },
+    "metadata": { "prompt_version": "v1_loss_frame", "adversarial": true }
+  }
+]
