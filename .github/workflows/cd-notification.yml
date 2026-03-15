@@ -73,23 +73,34 @@ jobs:
             --max-instances=5 \
             --quiet
 
-      - name: Verify Deployment
+      - name: Get Service URL
+        id: get-url
         run: |
           SERVICE_URL=$(gcloud run services describe ${SERVICE_NAME} \
             --project="${PROJECT_ID}" \
             --region="${REGION}" \
             --format='value(status.url)')
+          echo "url=${SERVICE_URL}" >> $GITHUB_OUTPUT
+
+      - name: Get ID Token
+        id: get-token
+        uses: google-github-actions/get-id-token@v2
+        with:
+          host: ${{ steps.get-url.outputs.url }}
+          audience: ${{ steps.get-url.outputs.url }}
+
+      - name: Verify Deployment
+        run: |
+          SERVICE_URL="${{ steps.get-url.outputs.url }}"
+          TOKEN="${{ steps.get-token.outputs.id_token }}"
 
           if [ -z "$SERVICE_URL" ]; then
             echo "❌ Failed to fetch service URL"
             exit 1
           fi
 
-          echo "Service URL: $SERVICE_URL"
-          sleep 5
-
-          TOKEN=$(gcloud auth print-identity-token --audiences="${SERVICE_URL}")
-
+          echo "Verifying Health Check at: $SERVICE_URL/notifications/health"
+          
           for i in {1..5}; do
             if curl --fail --silent -H "Authorization: Bearer ${TOKEN}" "$SERVICE_URL/notifications/health"; then
               echo "✅ Notification service healthy"
