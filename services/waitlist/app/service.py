@@ -1,4 +1,5 @@
 import logging
+import uuid
 
 import httpx
 from sqlalchemy import func, select
@@ -60,6 +61,11 @@ async def _notify(email: str) -> None:
         return
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
-            await client.post(url, json={"type": "waitlist_joined", "email": email})
+            await client.post(url, json={
+                "event_id": str(uuid.uuid4()),
+                "event_type": "WAITLIST_JOINED",
+                "email": email,
+                "metadata": {},
+            })
     except Exception:
         logger.warning("Notification failed for %s — continuing", email, exc_info=True)
