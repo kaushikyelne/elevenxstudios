@@ -24,13 +24,26 @@ services:
     env_file:
       - .env
     environment:
-      - DB_URL=jdbc:postgresql://db:5432/moneylane
-      - DB_USERNAME=${DB_USERNAME:-postgres}
-      - DB_PASSWORD=${DB_PASSWORD:-root}
-      - SUPABASE_AUTH_BASE_URL=${SUPABASE_URL:-https://placeholder.supabase.co/auth/v1}
-      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-placeholder-anon-key}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-placeholder-service-role-key}
-      - SUPABASE_ISSUER_URI=${SUPABASE_JWT_ISSUER:-https://placeholder.supabase.co/auth/v1}
+      DB_URL: jdbc:postgresql://db:5432/moneylane
+      DB_USERNAME: postgres
+      DB_PASSWORD: root
+
+      # JWT verification only (this is REQUIRED)
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: ${SUPABASE_JWT_ISSUER}
+
+      # Optional: ONLY if you still have admin/background flows
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  notification:
+    build: services/notification/
+    container_name: moneylane-notification
+    ports:
+      - "8081:8080"
+    env_file:
+      - services/notification/.env
     depends_on:
       db:
         condition: service_healthy
