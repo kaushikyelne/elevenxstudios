@@ -84,10 +84,13 @@ jobs:
 
       - name: Get ID Token
         id: get-token
-        uses: google-github-actions/get-id-token@v2
+        uses: google-github-actions/auth@v2
         with:
-          host: ${{ steps.get-url.outputs.url }}
-          audience: ${{ steps.get-url.outputs.url }}
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+          token_format: 'id_token'
+          id_token_audience: ${{ steps.get-url.outputs.url }}
+          id_token_include_email: true
 
       - name: Verify Deployment
         run: |
