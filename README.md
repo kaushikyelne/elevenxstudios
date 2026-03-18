@@ -88,6 +88,18 @@ Minimal FastAPI microservice for pre-launch email collection. Deployed as a stan
 | `/api/v1/waitlist/health` | GET | Health check |
 | `/api/v1/waitlist/count` | GET | Total signups count |
 
+### Agent Service
+AI-powered financial assistant for MoneyLane, using **Google Gemini** (Gemini 2.0 Flash).
+
+- **Stack**: Python 3.12 · FastAPI · Google Generative AI SDK
+- **Live**: `https://agent-service-972358167214.us-central1.run.app`
+- **Docs**: `https://agent-service-972358167214.us-central1.run.app/docs`
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/agent/chat` | POST | Interact with the financial agent |
+| `/api/v1/agent/health` | GET | Health check |
+
 #### Join Waitlist
 **POST** `/api/v1/waitlist/join`
 ```json
