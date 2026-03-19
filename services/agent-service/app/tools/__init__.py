@@ -1,18 +1,14 @@
-from typing import List
-from app.tools.base import AgentTool
-from app.tools.transaction_tool import GetTransactionsTool
-from app.tools.notification_tool import SendNotificationTool
+from app.tools.transaction_tool import get_transactions
+from app.tools.notification_tool import send_notification
 
-# Registry of all available tools for the agent
-TOOL_REGISTRY: List[AgentTool] = [
-    GetTransactionsTool(),
-    SendNotificationTool(),
+# List of all available tool functions for Google GenAI introspection
+TOOL_FUNCTIONS = [
+    get_transactions,
+    send_notification,
 ]
 
-def get_tool_definitions() -> List[dict]:
-    """Returns a list of tool definitions in Gemini format."""
-    return [t.to_gemini_tool() for t in TOOL_REGISTRY]
-
-def get_tool_map() -> dict:
-    """Returns a map of tool names to their instances for execution."""
-    return {t.name: t for t in TOOL_REGISTRY}
+# Map for manual execution if needed
+TOOL_MAP = {
+    "get_transactions": get_transactions,
+    "send_notification": send_notification,
+}

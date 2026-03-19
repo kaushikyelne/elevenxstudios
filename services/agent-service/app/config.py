@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     gemini_api_key: str | None = None
-    gemini_model: str = "gemini-1.5-flash-latest"
+    gemini_model: str = "gemini-2.0-flash"
     notification_service_url: str | None = None
     cors_origins: str = "http://localhost:3000"
 
