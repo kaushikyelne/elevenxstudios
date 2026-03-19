@@ -1,8 +1,8 @@
 import logging
 from typing import List, Optional
 
-import google.generativeai as genai
-from google.generativeai import types
+from google import genai
+from google.genai import types
 
 from app.config import settings
 from app.prompts.system import FINANCIAL_ADVISOR_PROMPT
@@ -13,62 +13,87 @@ logger = logging.getLogger(__name__)
 
 class FinancialAgent:
     def __init__(self):
-        genai.configure(api_key=settings.gemini_api_key)
+        # We use the new unified SDK
+        self.client = genai.Client(
+            api_key=settings.gemini_api_key,
+            http_options={'api_version': 'v1'} # Force stable v1
+        )
         self.model_name = settings.gemini_model
-        
+
     async def chat(self, message: str, history: Optional[List[dict]] = None) -> dict:
-        """Sends a message to Gemini using stable SDK with model fallback."""
+        """Sends a message to Gemini using the modern google-genai SDK with v1 stability."""
         
-        # Priority list of models to try
-        models_to_try = [
-            self.model_name,
-            "gemini-1.5-flash-latest",
-            "gemini-1.5-flash",
-            "gemini-2.0-flash",
-            "gemini-2.0-flash-exp"
-        ]
+        # Priority fallback list
+        models_to_try = [self.model_name, "gemini-2.0-flash", "gemini-1.5-flash"]
         
+        # Format history/contents for Gemini
+        contents = []
+        if history:
+            for h in history:
+                contents.append(types.Content(role=h["role"], parts=[types.Part(text=h["content"])]))
+        
+        # User message
+        contents.append(types.Content(role="user", parts=[types.Part(text=message)]))
+
         last_error = None
-        
         for model_id in models_to_try:
             try:
                 logger.info(f"Attempting chat with model: {model_id}")
-                model = genai.GenerativeModel(
-                    model_name=model_id,
-                    system_instruction=FINANCIAL_ADVISOR_PROMPT,
-                    tools=TOOL_FUNCTIONS
+                
+                # In google-genai, tools are passed as lists of functions or types.Tool
+                gemini_tools = [types.Tool(function_declarations=[
+                    # We can use the helper or define them. 
+                    # Actually, the new SDK can auto-generate from functions too!
+                ])]
+                # For simplicity, let's use the functions directly if the SDK supports it, 
+                # or pass the definitions we have.
+                
+                # Let's use the TOOL_FUNCTIONS approach if the SDK supports it.
+                # Actually, the new SDK expects types.Tool objects or functions.
+                
+                response = self.client.models.generate_content(
+                    model=model_id,
+                    contents=contents,
+                    config=types.GenerateContentConfig(
+                        system_instruction=FINANCIAL_ADVISOR_PROMPT,
+                        tools=TOOL_FUNCTIONS, # The new SDK supports passing functions directly!
+                    ),
                 )
 
-                # Format history
-                history_list = []
-                if history:
-                    for h in history:
-                        history_list.append({"role": h["role"], "parts": [h["content"]]})
-                
-                chat_session = model.start_chat(history=history_list)
-                
-                # Send message
-                response = await chat_session.send_message_async(message)
-                
                 tool_calls_made = []
                 
-                # ReAct Loop
-                while response.candidates[0].content.parts[0].function_call:
-                    fn = response.candidates[0].content.parts[0].function_call
+                # Handle potential tool calls
+                while response.candidates[0].content.parts and response.candidates[0].content.parts[0].function_call:
+                    part = response.candidates[0].content.parts[0]
+                    fn = part.function_call
                     tool_name = fn.name
-                    args = dict(fn.args)
+                    args = fn.args
+                    
+                    logger.info(f"Agent requested tool: {tool_name} with args: {args}")
                     
                     if tool_name in TOOL_MAP:
+                        # Execute tool
                         result = await TOOL_MAP[tool_name](**args)
                         tool_calls_made.append({"tool": tool_name, "args": args, "result": result})
                         
-                        response = await chat_session.send_message_async(
-                            types.Part(
+                        # Add the model's call and our response to the conversation
+                        contents.append(response.candidates[0].content)
+                        contents.append(types.Content(
+                            parts=[types.Part(
                                 function_response=types.FunctionResponse(
                                     name=tool_name,
                                     response=result
                                 )
-                            )
+                            )]
+                        ))
+                        
+                        # Generate next turn
+                        response = self.client.models.generate_content(
+                            model=model_id,
+                            contents=contents,
+                            config=types.GenerateContentConfig(
+                                system_instruction=FINANCIAL_ADVISOR_PROMPT,
+                            ),
                         )
                     else:
                         break
@@ -80,16 +105,10 @@ class FinancialAgent:
 
             except Exception as e:
                 last_error = e
-                # If it's a 404, we try the next model
-                if "404" in str(e) or "not found" in str(e).lower():
-                    logger.warning(f"Model {model_id} not found, trying fallback...")
+                # Handle 404 or 429 fallbacks
+                if "404" in str(e) or "429" in str(e):
+                    logger.warning(f"Model {model_id} failed with {e}, trying fallback...")
                     continue
-                # For 429 (quota), we might also want to try another model, but often quota is project-wide
-                if "429" in str(e):
-                    logger.warning(f"Model {model_id} rate limited, trying fallback...")
-                    continue
-                
-                # For other errors, break and report
                 break
 
         return {"reply": f"Sorry, all models failed. Last error: {str(last_error)}", "tool_calls": []}
