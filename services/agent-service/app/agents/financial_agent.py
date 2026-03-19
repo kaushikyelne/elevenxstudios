@@ -6,7 +6,7 @@ from google.generativeai import types
 
 from app.config import settings
 from app.prompts.system import FINANCIAL_ADVISOR_PROMPT
-from app.tools import get_tool_definitions, get_tool_map
+from app.tools import TOOL_FUNCTIONS, TOOL_MAP
 
 logger = logging.getLogger(__name__)
 
@@ -15,67 +15,84 @@ class FinancialAgent:
     def __init__(self):
         genai.configure(api_key=settings.gemini_api_key)
         self.model_name = settings.gemini_model
-        self.tool_map = get_tool_map()
         
-        # Tools in Gemini format for the older SDK
-        self.tools = get_tool_definitions()
-
     async def chat(self, message: str, history: Optional[List[dict]] = None) -> dict:
-        """Sends a message to Gemini 1.5/2.0 using the stable generativeai SDK."""
+        """Sends a message to Gemini using stable SDK with model fallback."""
         
-        try:
-            # Initialize model with system instruction and tools
-            model = genai.GenerativeModel(
-                model_name=self.model_name,
-                system_instruction=FINANCIAL_ADVISOR_PROMPT,
-                tools=self.tools
-            )
+        # Priority list of models to try
+        models_to_try = [
+            self.model_name,
+            "gemini-1.5-flash-latest",
+            "gemini-1.5-flash",
+            "gemini-2.0-flash",
+            "gemini-2.0-flash-exp"
+        ]
+        
+        last_error = None
+        
+        for model_id in models_to_try:
+            try:
+                logger.info(f"Attempting chat with model: {model_id}")
+                model = genai.GenerativeModel(
+                    model_name=model_id,
+                    system_instruction=FINANCIAL_ADVISOR_PROMPT,
+                    tools=TOOL_FUNCTIONS
+                )
 
-            # Start chat session with history if provided
-            history_list = []
-            if history:
-                for h in history:
-                    history_list.append({"role": h["role"], "parts": [h["content"]]})
-            
-            chat_session = model.start_chat(history=history_list)
-            
-            # Send the user message
-            response = await chat_session.send_message_async(message)
-            
-            # ReAct Loop: Handle Tool Calls
-            tool_calls_made = []
-            
-            # The older SDK handles the first turn, but if it returns a function call, we must execute.
-            candidate = response.candidates[0]
-            
-            # Check for function calls in the response parts
-            for part in candidate.content.parts:
-                if fn := part.function_call:
+                # Format history
+                history_list = []
+                if history:
+                    for h in history:
+                        history_list.append({"role": h["role"], "parts": [h["content"]]})
+                
+                chat_session = model.start_chat(history=history_list)
+                
+                # Send message
+                response = await chat_session.send_message_async(message)
+                
+                tool_calls_made = []
+                
+                # ReAct Loop
+                while response.candidates[0].content.parts[0].function_call:
+                    fn = response.candidates[0].content.parts[0].function_call
                     tool_name = fn.name
                     args = dict(fn.args)
                     
-                    logger.info(f"Agent requested tool: {tool_name} with args: {args}")
-                    
-                    if tool_name in self.tool_map:
-                        tool_result = await self.tool_map[tool_name].execute(**args)
-                        tool_calls_made.append({"tool": tool_name, "args": args, "result": tool_result})
+                    if tool_name in TOOL_MAP:
+                        result = await TOOL_MAP[tool_name](**args)
+                        tool_calls_made.append({"tool": tool_name, "args": args, "result": result})
                         
-                        # Provide the result back to the model for final answer
                         response = await chat_session.send_message_async(
                             types.Part(
                                 function_response=types.FunctionResponse(
                                     name=tool_name,
-                                    response=tool_result
+                                    response=result
                                 )
                             )
                         )
                     else:
-                        logger.warning(f"Tool {tool_name} requested but not found in map.")
+                        break
 
-            return {
-                "reply": response.text,
-                "tool_calls": tool_calls_made
-            }
+                return {
+                    "reply": response.text,
+                    "tool_calls": tool_calls_made
+                }
+
+            except Exception as e:
+                last_error = e
+                # If it's a 404, we try the next model
+                if "404" in str(e) or "not found" in str(e).lower():
+                    logger.warning(f"Model {model_id} not found, trying fallback...")
+                    continue
+                # For 429 (quota), we might also want to try another model, but often quota is project-wide
+                if "429" in str(e):
+                    logger.warning(f"Model {model_id} rate limited, trying fallback...")
+                    continue
+                
+                # For other errors, break and report
+                break
+
+        return {"reply": f"Sorry, all models failed. Last error: {str(last_error)}", "tool_calls": []}
 
         except Exception as e:
             logger.error(f"Error in FinancialAgent.chat: {e}", exc_info=True)
