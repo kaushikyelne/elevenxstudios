@@ -13,7 +13,10 @@ logger = logging.getLogger(__name__)
 
 class FinancialAgent:
     def __init__(self):
-        self.client = genai.Client(api_key=settings.gemini_api_key)
+        self.client = genai.Client(
+            api_key=settings.gemini_api_key,
+            http_options={'api_version': 'v1'}
+        )
         self.model_id = settings.gemini_model
         self.tool_map = get_tool_map()
         
