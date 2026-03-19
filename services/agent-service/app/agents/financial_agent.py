@@ -1,8 +1,8 @@
 import logging
 from typing import List, Optional
 
-from google import genai
-from google.genai import types
+import google.generativeai as genai
+from google.generativeai import types
 
 from app.config import settings
 from app.prompts.system import FINANCIAL_ADVISOR_PROMPT
@@ -13,55 +13,46 @@ logger = logging.getLogger(__name__)
 
 class FinancialAgent:
     def __init__(self):
-        self.client = genai.Client(
-            api_key=settings.gemini_api_key,
-            http_options={'api_version': 'v1'}
-        )
-        self.model_id = settings.gemini_model
+        genai.configure(api_key=settings.gemini_api_key)
+        self.model_name = settings.gemini_model
         self.tool_map = get_tool_map()
         
-        # Tools in Gemini format
-        self.gemini_tools = [
-            types.Tool(function_declarations=[
-                types.FunctionDeclaration(**t) for t in get_tool_definitions()
-            ])
-        ]
+        # Tools in Gemini format for the older SDK
+        self.tools = get_tool_definitions()
 
     async def chat(self, message: str, history: Optional[List[dict]] = None) -> dict:
-        """Sends a message to Gemini and handles potential tool calls."""
+        """Sends a message to Gemini 1.5/2.0 using the stable generativeai SDK."""
         
-        # Format history for Gemini
-        contents = []
-        if history:
-            for h in history:
-                contents.append(types.Content(role=h["role"], parts=[types.Part(text=h["content"])]))
-        
-        # Add current message
-        contents.append(types.Content(role="user", parts=[types.Part(text=message)]))
-
         try:
-            # Initial call to Gemini
-            response = self.client.models.generate_content(
-                model=self.model_id,
-                contents=contents,
-                config=types.GenerateContentConfig(
-                    system_instruction=FINANCIAL_ADVISOR_PROMPT,
-                    tools=self.gemini_tools,
-                ),
+            # Initialize model with system instruction and tools
+            model = genai.GenerativeModel(
+                model_name=self.model_name,
+                system_instruction=FINANCIAL_ADVISOR_PROMPT,
+                tools=self.tools
             )
 
-            # Recursive tool handling loop (ReAct)
-            # Note: For simplicity, we handle one round of tool calls.
-            # Gemini typically suggests the tools in the first response.
+            # Start chat session with history if provided
+            history_list = []
+            if history:
+                for h in history:
+                    history_list.append({"role": h["role"], "parts": [h["content"]]})
             
-            final_parts = []
+            chat_session = model.start_chat(history=history_list)
+            
+            # Send the user message
+            response = await chat_session.send_message_async(message)
+            
+            # ReAct Loop: Handle Tool Calls
             tool_calls_made = []
-
-            for part in response.candidates[0].content.parts:
-                if part.function_call:
-                    tool_call = part.function_call
-                    tool_name = tool_call.name
-                    args = tool_call.args
+            
+            # The older SDK handles the first turn, but if it returns a function call, we must execute.
+            candidate = response.candidates[0]
+            
+            # Check for function calls in the response parts
+            for part in candidate.content.parts:
+                if fn := part.function_call:
+                    tool_name = fn.name
+                    args = dict(fn.args)
                     
                     logger.info(f"Agent requested tool: {tool_name} with args: {args}")
                     
@@ -69,32 +60,20 @@ class FinancialAgent:
                         tool_result = await self.tool_map[tool_name].execute(**args)
                         tool_calls_made.append({"tool": tool_name, "args": args, "result": tool_result})
                         
-                        # Add tool response to contents for final generation
-                        contents.append(response.candidates[0].content)
-                        contents.append(types.Content(
-                            parts=[types.Part(
+                        # Provide the result back to the model for final answer
+                        response = await chat_session.send_message_async(
+                            types.Part(
                                 function_response=types.FunctionResponse(
                                     name=tool_name,
                                     response=tool_result
                                 )
-                            )]
-                        ))
+                            )
+                        )
                     else:
                         logger.warning(f"Tool {tool_name} requested but not found in map.")
 
-            # If tool calls were made, generate the final response with tool results
-            if tool_calls_made:
-                response = self.client.models.generate_content(
-                    model=self.model_id,
-                    contents=contents,
-                    config=types.GenerateContentConfig(
-                        system_instruction=FINANCIAL_ADVISOR_PROMPT,
-                    ),
-                )
-
-            reply = response.text
             return {
-                "reply": reply,
+                "reply": response.text,
                 "tool_calls": tool_calls_made
             }
 
