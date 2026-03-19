@@ -93,7 +93,3 @@ class FinancialAgent:
                 break
 
         return {"reply": f"Sorry, all models failed. Last error: {str(last_error)}", "tool_calls": []}
-
-        except Exception as e:
-            logger.error(f"Error in FinancialAgent.chat: {e}", exc_info=True)
-            return {"reply": f"Sorry, I encountered an error: {str(e)}", "tool_calls": []}
