@@ -17,6 +17,8 @@ router = APIRouter()
 
 def categorize_transaction(description: str, session: Session) -> str:
     """Simple rule-based categorization."""
+    if not description:
+        return "Miscellaneous"
     rules = session.exec(select(CategoryRule)).all()
     for rule in rules:
         if rule.keyword.lower() in description.lower():
@@ -52,6 +54,7 @@ async def create_transaction(body: TransactionBase, session: Session = Depends(g
     session.add(tx)
     session.commit()
     session.refresh(tx)
+    logger.info(f"Transaction created: {tx.id} | amount: {tx.amount} | category: {tx.category}")
 
     # 3. Auto-update budget spent_amount
     budget = session.exec(
