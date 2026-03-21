@@ -1,10 +1,24 @@
 import os
+import logging
 from sqlmodel import create_engine, SQLModel, Session, select
 from dotenv import load_dotenv
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:root@localhost:5432/moneylane")
+
+# For Cloud Run compatibility, strip +asyncpg or other async drivers if present
+# since we are using psycopg2 (sync)
+if "asyncpg" in DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://")
+    logger.info("Normalized asyncpg DATABASE_URL for psycopg2")
+
+# Log connection attempt (masking password)
+masked_url = DATABASE_URL.split("@")[-1] if "@" in DATABASE_URL else DATABASE_URL
+logger.info(f"Connecting to database at: {masked_url}")
 
 engine = create_engine(DATABASE_URL, echo=True)
 
