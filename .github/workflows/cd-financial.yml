@@ -2,7 +2,7 @@ name: CD Financial Service
 
 on:
   push:
-    branches: [master]
+    branches: [master, feature/agent-service-scaffold]
     paths:
       - 'services/financial-service/**'
 
