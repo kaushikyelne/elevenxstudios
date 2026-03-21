@@ -25,7 +25,17 @@ class FinancialAgent:
             try:
                 url = f"{self.base_url}/models/{model_id}:generateContent?key={self.api_key}"
                 
-                # 1. Prepare contents
+                # 1. Fetch situational context (Top Insight)
+                insight_context = ""
+                try:
+                    from app.tools.insight_tool import get_top_insight
+                    top_insight = await get_top_insight()
+                    if top_insight.get("state") == "ready":
+                        insight_context = f"\n\nCURRENT FINANCIAL INSIGHT: {top_insight['title']} - {top_insight['description']}. Actions suggested: {', '.join(top_insight['actions'])}."
+                except Exception as e:
+                    logger.warning(f"Could not fetch insight context: {e}")
+
+                # 2. Prepare contents
                 contents = []
                 if history:
                     for h in history:
@@ -39,7 +49,7 @@ class FinancialAgent:
                     "parts": [{"text": message}]
                 })
 
-                # 2. Prepare Tools
+                # 3. Prepare Tools
                 tools = [
                     {
                         "function_declarations": [
@@ -53,6 +63,11 @@ class FinancialAgent:
                                         "category": {"type": "STRING", "description": "Category filter"}
                                     }
                                 }
+                            },
+                            {
+                                "name": "get_top_insight",
+                                "description": "Fetch the most relevant financial insight for the user. Provides diagnostic and prescriptive context.",
+                                "parameters": {"type": "OBJECT", "properties": {}}
                             },
                             {
                                 "name": "send_notification",
@@ -73,7 +88,7 @@ class FinancialAgent:
 
                 payload = {
                     "contents": contents,
-                    "system_instruction": {"parts": [{"text": FINANCIAL_ADVISOR_PROMPT}]},
+                    "system_instruction": {"parts": [{"text": FINANCIAL_ADVISOR_PROMPT + insight_context}]},
                     "tools": tools
                 }
 
