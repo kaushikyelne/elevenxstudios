@@ -2,7 +2,7 @@ name: CD Financial Service
 
 on:
   push:
-    branches: [master, feature/agent-service-scaffold]
+    branches: [master]
     paths:
       - 'services/financial-service/**'
 
@@ -67,7 +67,7 @@ jobs:
             --cpu=1 \
             --memory=512Mi \
             --concurrency=20 \
-            --timeout=30 \
+            --timeout=60 \
             --min-instances=0 \
             --max-instances=3 \
             --quiet

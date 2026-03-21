@@ -63,12 +63,12 @@ jobs:
             --no-allow-unauthenticated \
             --revision-suffix="$(echo ${IMAGE_TAG} | cut -c1-7)-$(date +%s)" \
             --add-cloudsql-instances="moneylane-prod:us-central1:moneylane-db" \
-            --update-secrets="DATABASE_URL=notification-database-url:latest,BREVO_API_KEY=brevo-api-key:latest" \
+            --update-secrets="DATABASE_URL=waitlist-database-url:latest,BREVO_API_KEY=brevo-api-key:latest" \
             --update-env-vars="FROM_EMAIL=noreply@elevenxstudios.com" \
             --cpu=1 \
             --memory=256Mi \
             --concurrency=10 \
-            --timeout=15 \
+            --timeout=60 \
             --min-instances=0 \
             --max-instances=5 \
             --quiet
