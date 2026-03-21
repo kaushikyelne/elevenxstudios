@@ -63,7 +63,7 @@ jobs:
             --no-allow-unauthenticated \
             --revision-suffix="$(echo ${IMAGE_TAG} | cut -c1-7)-$(date +%s)" \
             --add-cloudsql-instances="moneylane-prod:us-central1:moneylane-db" \
-            --update-secrets="DATABASE_URL=financial-database-url:latest" \
+            --update-secrets="DATABASE_URL=waitlist-database-url:latest" \
             --cpu=1 \
             --memory=512Mi \
             --concurrency=20 \
