@@ -63,7 +63,7 @@ jobs:
             --no-allow-unauthenticated \
             --revision-suffix="$(echo ${IMAGE_TAG} | cut -c1-7)-$(date +%s)" \
             --add-cloudsql-instances="moneylane-prod:us-central1:moneylane-db" \
-            --set-env-vars="DATABASE_URL=postgresql://postgres:${{ secrets.DB_PASSWORD }}@localhost:5432/moneylane" \
+            --update-secrets="DATABASE_URL=waitlist-database-url:latest" \
             --cpu=1 \
             --memory=512Mi \
             --concurrency=20 \
