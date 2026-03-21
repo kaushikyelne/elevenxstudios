@@ -1,0 +1,116 @@
+name: CD Financial Service
+
+on:
+  push:
+    branches: [master, feature/agent-service-scaffold]
+    paths:
+      - 'services/financial-service/**'
+
+concurrency:
+  group: cd-financial-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      contents: read
+      id-token: write
+
+    env:
+      PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+      REGION: ${{ secrets.GCP_REGION }}
+      ARTIFACT_REPO: ${{ secrets.GCP_ARTIFACT_REPO }}
+      SERVICE_NAME: financial-service
+      IMAGE_NAME: financial-api
+      IMAGE_TAG: ${{ github.sha }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker
+        run: gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            -t ${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPO}/${IMAGE_NAME}:${IMAGE_TAG} \
+            services/financial-service/
+
+      - name: Push Docker image
+        run: |
+          docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPO}/${IMAGE_NAME}:${IMAGE_TAG}
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${SERVICE_NAME} \
+            --project="${PROJECT_ID}" \
+            --image="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPO}/${IMAGE_NAME}:${IMAGE_TAG}" \
+            --region="${REGION}" \
+            --platform="managed" \
+            --no-allow-unauthenticated \
+            --revision-suffix="$(echo ${IMAGE_TAG} | cut -c1-7)-$(date +%s)" \
+            --add-cloudsql-instances="moneylane-prod:us-central1:moneylane-db" \
+            --update-secrets="DATABASE_URL=waitlist-database-url:latest" \
+            --cpu=1 \
+            --memory=512Mi \
+            --concurrency=20 \
+            --timeout=30 \
+            --min-instances=0 \
+            --max-instances=3 \
+            --quiet
+
+      - name: Get Service URL
+        id: get-url
+        run: |
+          SERVICE_URL=$(gcloud run services describe ${SERVICE_NAME} \
+            --project="${PROJECT_ID}" \
+            --region="${REGION}" \
+            --format='value(status.url)')
+          echo "url=${SERVICE_URL}" >> $GITHUB_OUTPUT
+
+      - name: Get ID Token
+        id: get-token
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+          token_format: 'id_token'
+          id_token_audience: ${{ steps.get-url.outputs.url }}
+          id_token_include_email: true
+
+      - name: Verify Deployment
+        run: |
+          SERVICE_URL="${{ steps.get-url.outputs.url }}"
+          TOKEN="${{ steps.get-token.outputs.id_token }}"
+
+          if [ -z "$SERVICE_URL" ]; then
+            echo "❌ Failed to fetch service URL"
+            exit 1
+          fi
+
+          echo "Verifying Health Check at: $SERVICE_URL/health"
+          
+          for i in {1..5}; do
+            if curl --fail --silent -H "Authorization: Bearer ${TOKEN}" "$SERVICE_URL/health"; then
+              echo "✅ Financial service healthy"
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying in 5s..."
+            sleep 5
+          done
+
+          echo "❌ Health check failed after retries"
+          exit 1
