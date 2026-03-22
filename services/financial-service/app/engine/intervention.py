@@ -6,6 +6,8 @@ and fires alerts with loss-framed messaging and 1-click action suggestions.
 No LLM in this path — deterministic, fast, cheap.
 """
 import logging
+import httpx
+import uuid
 from datetime import datetime, timedelta
 from typing import Optional
 from sqlmodel import Session, select
@@ -14,6 +16,7 @@ from app.schemas import (
     InterventionResponse, InterventionSeverity, ActionSuggestion,
 )
 from app.engine.predictor import predict_overspend
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +24,7 @@ logger = logging.getLogger(__name__)
 ALERT_COOLDOWN_HOURS = 24
 
 
-def check_and_intervene(
+async def check_and_intervene(
     session: Session,
     transaction: Transaction,
 ) -> InterventionResponse:
@@ -41,7 +44,7 @@ def check_and_intervene(
 
     # --- Check 1: Category soft-blocked ---
     if budget.is_blocked:
-        return _build_intervention(
+        return await _build_intervention(
             session=session,
             category=category,
             alert_type="soft_block",
@@ -74,7 +77,7 @@ def check_and_intervene(
         today_spent = _get_today_spent(session, category)
         if today_spent > budget.daily_limit:
             overage = today_spent - budget.daily_limit
-            return _build_intervention(
+            return await _build_intervention(
                 session=session,
                 category=category,
                 alert_type="daily_limit_breach",
@@ -121,7 +124,7 @@ def check_and_intervene(
         remaining_budget = max(budget.limit_amount - budget.spent_amount, 0)
         suggested_daily = round(remaining_budget / max(prediction.days_remaining, 1))
 
-        return _build_intervention(
+        return await _build_intervention(
             session=session,
             category=category,
             alert_type="overspend_warning",
@@ -187,7 +190,7 @@ def _build_loss_framed_message(
         )
 
 
-def _build_intervention(
+async def _build_intervention(
     session: Session,
     category: str,
     alert_type: str,
@@ -220,6 +223,10 @@ def _build_intervention(
     session.add(alert)
     session.commit()
 
+    # Fire actual notification if HIGH or CRITICAL
+    if severity in [InterventionSeverity.HIGH, InterventionSeverity.CRITICAL]:
+        await _fire_notification(message, alert_type)
+
     return InterventionResponse(
         triggered=True,
         severity=severity,
@@ -229,6 +236,28 @@ def _build_intervention(
         days_remaining=days_remaining,
         suggested_actions=actions,
     )
+
+
+async def _fire_notification(message: str, event_type: str):
+    """Calls the internal Notification Service (Go/Brevo)."""
+    url = settings.notification_service_url
+    if not url:
+        logger.warning("Notification Service URL not configured. Skipping alert.")
+        return
+
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            payload = {
+                "event_id": str(uuid.uuid4()),
+                "event_type": event_type.upper(),
+                "email": "user@example.com",  # In a real app, this would be the user's email
+                "metadata": {"content": message},
+            }
+            response = await client.post(url, json=payload)
+            response.raise_for_status()
+            logger.info(f"Proactive notification sent: {event_type}")
+    except Exception as e:
+        logger.error(f"Failed to fire proactive notification: {e}")
 
 
 def _was_recently_alerted(session: Session, category: str, alert_type: str) -> bool:

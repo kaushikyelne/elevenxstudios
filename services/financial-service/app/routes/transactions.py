@@ -66,7 +66,7 @@ async def create_transaction(body: TransactionBase, session: Session = Depends(g
     # 4. Trigger intervention engine
     intervention = InterventionResponse(triggered=False)
     try:
-        intervention = check_and_intervene(session, tx)
+        intervention = await check_and_intervene(session, tx)
     except Exception as e:
         logger.error(f"Intervention engine error: {e}")
 
