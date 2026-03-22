@@ -11,11 +11,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: Build & Test
+  test-java:
+    name: Test Java Services
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,10 +30,35 @@ jobs:
       - name: Build & Run Tests
         run: ./gradlew build --no-daemon
 
-      - name: Upload Test Reports
-        if: always()
-        uses: actions/upload-artifact@v4
+  test-python:
+    name: Test Python Services
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [financial-service, agent-service, waitlist]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          name: test-reports
-          path: '**/build/reports/tests/'
-          retention-days: 7
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          cd services/${{ matrix.service }}
+          if [ -f requirements.txt ]; then
+            python -m pip install --upgrade pip
+            pip install -r requirements.txt
+            pip install pytest pytest-asyncio  # Ensure test deps are present
+          fi
+
+      - name: Run Tests
+        run: |
+          cd services/${{ matrix.service }}
+          if [ -d tests ]; then
+            python -m pytest tests/ -v
+          else
+            echo "No tests found for ${{ matrix.service }}"
+          fi
