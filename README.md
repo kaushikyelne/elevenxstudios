@@ -1,6 +1,6 @@
 # MoneyLane
 
-Simple Spring Boot 3.3 project structure with modular monolith and hexagonal architecture.
+**The Proactive Financial Co-pilot.** MoneyLane transforms traditional expense tracking (reactive) into AI-driven guidance (proactive) using real-time interventions, loss-framed predictions, and automated behavior-change loops.
 
 🚀 **Live API**: [api.moneylane.elevenxstudios.com](https://api.moneylane.elevenxstudios.com)
 
@@ -43,7 +43,8 @@ moneylane/
 │   ├── budget/         # Budgeting logic
 │   └── insight/        # Analytics and reports
 ├── services/
-│   └── waitlist/       # Pre-launch waitlist microservice (Python/FastAPI)
+│   ├── financial-service/ # Core Data & Intervention Engine (Python/FastAPI)
+│   └── waitlist/          # Pre-launch waitlist microservice (Python/FastAPI)
 ├── shared/
 │   ├── kernel/         # Core domain primitives (UserId, etc.)
 │   └── contracts/      # Cross-module communication contracts
@@ -88,16 +89,33 @@ Minimal FastAPI microservice for pre-launch email collection. Deployed as a stan
 | `/api/v1/waitlist/health` | GET | Health check |
 | `/api/v1/waitlist/count` | GET | Total signups count |
 
-### Agent Service
-AI-powered financial assistant for MoneyLane, using **Google Gemini** (Gemini 2.0 Flash).
+### Financial Service (The Core Engine)
+MoneyLane's "Brain". A high-performance Python service that handles all data writes, budget tracking, and the **Intervention Engine**.
 
-- **Stack**: Python 3.12 · FastAPI · Google Generative AI SDK
-- **Live**: `https://agent-service-972358167214.us-central1.run.app`
-- **Docs**: `https://agent-service-972358167214.us-central1.run.app/docs`
+- **Stack**: Python 3.11 · FastAPI · SQLModel · PostgreSQL · httpx
+- **Engine**: 
+  - **Predictor**: Real-time spending pace projection and month-end overspend forecasting.
+  - **Intervention**: 3-check pipeline (Soft-block → Daily Limit → Predictive Warning).
+  - **Ranking**: Actionability-weighted insight scoring (Normalized Impact × 0.6 + Actionability × 0.4).
+- **Proactive Alerts**: Direct HTTP fire to Notification Service on HIGH/CRITICAL thresholds (no LLM in the critical path).
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/v1/agent/chat` | POST | Interact with the financial agent |
+| `/api/v1/transactions/` | POST | Log transaction + trigger real-time intervention engine |
+| `/api/v1/insights/home` | GET | Action-first financial insights |
+| `/api/v1/insights/predictions` | GET | Forecasted overspends for all categories |
+| `/api/v1/actions/` | POST | Action layer (set-daily-limit, soft-block, feedback) |
+
+### Agent Service
+The conversational co-pilot interface for MoneyLane, using **Google Gemini** (Gemini 2.0 Flash).
+
+- **Stack**: Python 3.12 · FastAPI · Google Generative AI SDK
+- **Persona**: Action-first co-pilot using loss-framing and autonomous tool usage.
+- **Tools**: `apply_action()` (direct execution of backend interventions via Agent API).
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/agent/chat` | POST | Interact with the financial co-pilot |
 | `/api/v1/agent/health` | GET | Health check |
 
 #### Join Waitlist
@@ -247,14 +265,15 @@ Each module contains its own sets of tests following the hexagonal layers.
 Every pull request to `master` or `develop` triggers an automated build and test pipeline.
 
 - **Workflow**: `.github/workflows/ci.yml`
-- **Steps**: Checkout → JDK 21 → Gradle (cached) → `./gradlew build` → Upload test reports
+- **Java**: Checkout → JDK 21 → Gradle (cached) → `./gradlew build`
+- **Python**: Matrix build → `pytest` for `financial-service`, `agent-service`, and `waitlist`
 - **Test Reports**: Available as downloadable artifacts in GitHub Actions
 
 ### CD — Continuous Deployment
 Merges to `master` trigger automated deployments to **GCP Cloud Run**.
 
-- **Main API** (`.github/workflows/cd.yml`): Deploys the Java monolith after CI passes
-- **Waitlist Service** (`.github/workflows/cd-waitlist.yml`): Deploys on `services/waitlist/**` changes
+- **Main API** (`.github/workflows/cd.yml`): Deploys the Java monolith after global CI passes
+- **Service CD** (`.github/workflows/cd-*.yml`): Individual service deployments (Financial, Agent, Waitlist) gated by service-specific `pytest` unit tests.
 
 **Shared Infrastructure**:
 - **Auth**: Workload Identity Federation (OIDC) — no long-lived credentials
