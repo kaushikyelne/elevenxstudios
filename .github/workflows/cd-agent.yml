@@ -43,6 +43,27 @@ jobs:
       - name: Configure Docker
         run: gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          cd services/agent-service
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio
+
+      - name: Run Tests
+        run: |
+          cd services/agent-service
+          if [ -d tests ]; then
+            python -m pytest tests/ -v
+          else
+            echo "No tests found for agent-service"
+          fi
+
       - name: Build Docker image
         run: |
           docker build \
