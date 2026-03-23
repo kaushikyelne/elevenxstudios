@@ -75,5 +75,17 @@ services:
       financial:
         condition: service_started
 
+  waitlist:
+    build: services/waitlist/
+    container_name: moneylane-waitlist
+    ports:
+      - "8084:8080"
+    environment:
+      DATABASE_URL: postgresql://postgres:root@db:5432/moneylane
+      NOTIFICATION_SERVICE_URL: http://notification:8080
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   postgres_data:
