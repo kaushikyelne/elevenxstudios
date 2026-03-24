@@ -42,3 +42,7 @@ Swagger UI available at `http://localhost:8000/docs` when running locally.
 ## Deployment
 
 Deployed automatically to Cloud Run on push to `master` when files in `services/waitlist/` change. See `.github/workflows/cd-waitlist.yml`.
+
+## Monitoring & Health
+
+The service exposes a standard health check endpoint at `/api/v1/waitlist/health`. In production, this is used by Cloud Run for liveness and readiness probes.
