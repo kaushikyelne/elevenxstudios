@@ -1,0 +1,58 @@
+package com.moneylane.modules.auth.local.infrastructure.persistence;
+
+import com.moneylane.modules.auth.common.application.port.out.UserRepository;
+import com.moneylane.modules.auth.common.domain.User;
+import com.moneylane.shared.kernel.UserId;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
+
+import java.util.Optional;
+
+@Component
+@RequiredArgsConstructor
+public class JpaUserRepository implements UserRepository {
+
+    private final SpringDataUserRepository repository;
+
+    @Override
+    public User save(User user) {
+        UserEntity entity = mapToEntity(user);
+        UserEntity savedEntity = repository.save(entity);
+        return mapToDomain(savedEntity);
+    }
+
+    @Override
+    public Optional<User> findByEmail(String email) {
+        return repository.findByEmail(email)
+                .map(this::mapToDomain);
+    }
+
+    @Override
+    public Optional<User> findByExternalUserId(String externalUserId) {
+        return repository.findByExternalUserId(externalUserId)
+                .map(this::mapToDomain);
+    }
+
+    private UserEntity mapToEntity(User user) {
+        return UserEntity.builder()
+                .id(user.getId() != null ? user.getId().getValue() : null)
+                .email(user.getEmail())
+                .passwordHash(user.getPasswordHash())
+                .status(user.getStatus())
+                .externalProvider(user.getExternalProvider())
+                .externalUserId(user.getExternalUserId())
+                .build();
+    }
+
+    private User mapToDomain(UserEntity entity) {
+        return User.builder()
+                .id(new UserId(entity.getId()))
+                .email(entity.getEmail())
+                .passwordHash(entity.getPasswordHash())
+                .status(entity.getStatus())
+                .externalProvider(entity.getExternalProvider())
+                .externalUserId(entity.getExternalUserId())
+                .build();
+    }
+}

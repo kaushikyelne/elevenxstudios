@@ -1,0 +1,53 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/localDB}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:root}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+
+  flyway:
+    enabled: true
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${SUPABASE_ISSUER_URI:https://krqlxwqauosqxipqnodw.supabase.co/auth/v1}
+
+springdoc:
+  api-docs:
+    path: /api-docs-new
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+  show-actuator: true
+  packages-to-scan: com.moneylane
+
+logging:
+  level:
+    org.springdoc: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+server:
+  port: 8080
+
+supabase:
+  auth:
+    base-url: ${SUPABASE_AUTH_BASE_URL:https://krqlxwqauosqxipqnodw.supabase.co/auth/v1}
+    anon-key: ${SUPABASE_ANON_KEY}
+  admin:
+    service-role-key: ${SUPABASE_SERVICE_ROLE_KEY:sb_publishable_h3t7nZVgEcPg3zOBO2p2Kw_5iyjq-We}
+
