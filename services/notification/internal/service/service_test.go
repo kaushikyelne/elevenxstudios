@@ -108,6 +108,7 @@ func TestProcess_FailureAfterRetries(t *testing.T) {
 		t.Errorf("expected status update to FAILED")
 	}
 }
+
 func TestResolveEmailContent(t *testing.T) {
 	tests := []struct {
 		name            string
