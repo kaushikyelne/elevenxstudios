@@ -33,6 +33,7 @@ services:
 
       # Optional: ONLY if you still have admin/background flows
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      SPRING_FLYWAY_BASELINE_ON_MIGRATE: "true"
     depends_on:
       db:
         condition: service_healthy
@@ -44,6 +45,44 @@ services:
       - "8081:8080"
     env_file:
       - services/notification/.env
+    environment:
+      - DATABASE_URL=postgres://postgres:root@db:5432/moneylane?sslmode=disable
+    depends_on:
+      db:
+        condition: service_healthy
+
+  financial:
+    build: services/financial-service/
+    container_name: moneylane-financial
+    ports:
+      - "8082:8080"
+    environment:
+      DATABASE_URL: postgresql://postgres:root@db:5432/moneylane
+    depends_on:
+      db:
+        condition: service_healthy
+
+  agent:
+    build: services/agent-service/
+    container_name: moneylane-agent
+    ports:
+      - "8083:8080"
+    env_file:
+      - .env
+    environment:
+      FINANCIAL_SERVICE_URL: http://financial:8080
+    depends_on:
+      financial:
+        condition: service_started
+
+  waitlist:
+    build: services/waitlist/
+    container_name: moneylane-waitlist
+    ports:
+      - "8084:8080"
+    environment:
+      DATABASE_URL: postgresql://postgres:root@db:5432/moneylane
+      NOTIFICATION_SERVICE_URL: http://notification:8080
     depends_on:
       db:
         condition: service_healthy
