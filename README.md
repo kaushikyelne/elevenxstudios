@@ -43,7 +43,8 @@ moneylane/
 │   ├── budget/         # Budgeting logic
 │   └── insight/        # Analytics and reports
 ├── services/
-│   └── waitlist/       # Pre-launch waitlist microservice (Python/FastAPI)
+│   ├── waitlist/       # Pre-launch waitlist microservice (Python/FastAPI)
+│   └── notification/   # Async notification service (Go/Clean Arch)
 ├── shared/
 │   ├── kernel/         # Core domain primitives (UserId, etc.)
 │   └── contracts/      # Cross-module communication contracts
@@ -88,6 +89,28 @@ Minimal FastAPI microservice for pre-launch email collection. Deployed as a stan
 | `/api/v1/waitlist/health` | GET | Health check |
 | `/api/v1/waitlist/count` | GET | Total signups count |
 
+### Notification Service
+Go-based async notification engine utilizing Brevo for transactional emails. Built with clean architecture and idempotent processing.
+
+- **Stack**: Go 1.22+ · PostgreSQL · Brevo API · slog (structured logging)
+- **Features**: Event-driven processing, 3x automatic retries for email delivery, idempotent event handling (INSERT-first strategy).
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/notifications/send` | POST | Send a transactional email based on an event type |
+| `/notifications/health` | GET | Health check |
+
+#### Send Notification
+**POST** `/notifications/send`
+```json
+{
+  "event_id": "evt_abc123",
+  "event_type": "WAITLIST_JOINED",
+  "email": "user@example.com",
+  "metadata": { "name": "Kaushik" }
+}
+```
+
 #### Join Waitlist
 **POST** `/api/v1/waitlist/join`
 ```json
@@ -118,6 +141,8 @@ The application requires specific environment variables to link with Supabase an
 | `DB_URL` | PostgreSQL JDBC URL | `jdbc:postgresql://localhost:5432/moneylane` |
 | `DB_USERNAME` | Database User | `postgres` |
 | `DB_PASSWORD` | Database Password | `password` |
+| `BREVO_API_KEY` | Brevo (Sendinblue) API Key | `xkeysib-xxxx` |
+| `FROM_EMAIL` | Sender Email Address | `noreply@elevenxstudios.com` |
 
 The application automatically loads these from the `.env` file during `bootRun` or via `docker-compose`.
 
@@ -224,9 +249,14 @@ Each module contains its own sets of tests following the hexagonal layers.
 
 - **Unit Tests**: Test core domain logic and application services with mocks.
 - **Integration Tests**: Test infrastructure adapters (Persistence/PostgreSQL) using `@DataJpaTest`.
-- **Run all tests**:
+- **Run Java tests**:
   ```bash
   ./gradlew test
+  ```
+- **Run Go tests (Notification Service)**:
+  ```bash
+  cd services/notification
+  go test -v ./...
   ```
 
 ## CI/CD
@@ -243,6 +273,7 @@ Merges to `master` trigger automated deployments to **GCP Cloud Run**.
 
 - **Main API** (`.github/workflows/cd.yml`): Deploys the Java monolith after CI passes
 - **Waitlist Service** (`.github/workflows/cd-waitlist.yml`): Deploys on `services/waitlist/**` changes
+- **Notification Service** (`.github/workflows/cd-notification.yml`): Deploys on `services/notification/**` changes
 
 **Shared Infrastructure**:
 - **Auth**: Workload Identity Federation (OIDC) — no long-lived credentials
