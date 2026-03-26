@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/elevenxstudios/moneylane/services/notification/internal/domain"
@@ -105,5 +106,76 @@ func TestProcess_FailureAfterRetries(t *testing.T) {
 	}
 	if !repo.updateCalled || repo.updateStatus != domain.StatusFailed {
 		t.Errorf("expected status update to FAILED")
+	}
+}
+
+func TestResolveEmailContent(t *testing.T) {
+	tests := []struct {
+		name            string
+		event           domain.NotificationEvent
+		expectedSubject string
+		contains        string
+	}{
+		{
+			name: "Waitlist Joined with Name",
+			event: domain.NotificationEvent{
+				EventType: "WAITLIST_JOINED",
+				Metadata:  map[string]string{"name": "Alice"},
+			},
+			expectedSubject: "Welcome to MoneyLane!",
+			contains:        "Hey Alice",
+		},
+		{
+			name: "Waitlist Joined without Name",
+			event: domain.NotificationEvent{
+				EventType: "WAITLIST_JOINED",
+			},
+			expectedSubject: "Welcome to MoneyLane!",
+			contains:        "Hey there",
+		},
+		{
+			name: "Default/Unknown Event",
+			event: domain.NotificationEvent{
+				EventType: "UNKNOWN",
+			},
+			expectedSubject: "Notification from MoneyLane",
+			contains:        "new notification",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			subject, body := resolveEmailContent(tt.event)
+			if subject != tt.expectedSubject {
+				t.Errorf("expected subject %s, got %s", tt.expectedSubject, subject)
+			}
+			if !contains(body, tt.contains) {
+				t.Errorf("body does not contain %s: %s", tt.contains, body)
+			}
+		})
+	}
+}
+
+func contains(s, substr string) bool {
+	return strings.Contains(s, substr)
+}
+
+func TestProcess_RepoUpdateFailure(t *testing.T) {
+	// The service currently ignores RepoUpdate errors, but we can verify it's attempt.
+	repo := &mockRepo{}
+	sender := &mockSender{}
+	svc := NewNotificationService(repo, sender, testLogger())
+
+	status := svc.Process(context.Background(), domain.NotificationEvent{
+		EventID:   "evt-123",
+		Email:     "test@example.com",
+		EventType: "WAITLIST_JOINED",
+	})
+
+	if status != "sent" {
+		t.Errorf("expected 'sent', got %s", status)
+	}
+	if !repo.updateCalled {
+		t.Errorf("expected repo UpdateStatus to be called")
 	}
 }
