@@ -123,16 +123,18 @@ graph TB
 ```
 moneylane/
 ├── bootstrap/          # Spring Boot Application runner & configuration
-├── modules/            # Java Modular Monolith
-│   ├── auth/           # Multi-module Authentication (local/supabase)
-│   ├── profile/        # User Profile management
-│   ├── transaction*    # (Java scaffold - logic moved to Python)
-│   └── budget/         # (Java scaffold)
-├── services/           # Standalone Microservices
-│   ├── financial-service/ # Core Data & Intervention Engine (Python)
-│   ├── agent-service/     # AI Co-pilot (Python/Gemini)
-│   ├── notification/      # Email delivery service (Go)
-│   └── waitlist/          # Waitlist microservice (Python)
+├── modules/
+│   ├── auth/           # Multi-module Authentication System
+│   │   ├── auth-common/  # Shared domain, ports, and common logic
+│   │   ├── auth-local/   # Native Username/Password & JWT implementation
+│   │   └── auth-supabase/# Supabase 3rd party authentication provider
+│   ├── profile/        # User Profile management (self-service)
+│   ├── transaction/    # Transaction management
+│   ├── budget/         # Budgeting logic
+│   └── insight/        # Analytics and reports
+├── services/
+│   ├── waitlist/       # Pre-launch waitlist microservice (Python/FastAPI)
+│   └── notification/   # Async notification service (Go/Clean Arch)
 ├── shared/
 │   ├── kernel/         # Core domain primitives (UserId, etc.)
 │   └── contracts/      # Cross-module communication contracts
@@ -170,9 +172,37 @@ moneylane/
 <details>
 <summary><b>📧 Notification Service (Go)</b></summary>
 
-- **Reliability**: Exactly-once delivery using `INSERT-first` idempotency.
-- **Performance**: High-concurrency Go implementation with exponential backoff retries.
-</details>
+### Notification Service
+Go-based async notification engine utilizing Brevo for transactional emails. Built with clean architecture and idempotent processing.
+
+- **Stack**: Go 1.22+ · PostgreSQL · Brevo API · slog (structured logging)
+- **Features**: Event-driven processing, 3x automatic retries for email delivery, idempotent event handling (INSERT-first strategy).
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/notifications/send` | POST | Send a transactional email based on an event type |
+| `/notifications/health` | GET | Health check |
+
+#### Send Notification
+**POST** `/notifications/send`
+```json
+{
+  "event_id": "evt_abc123",
+  "event_type": "WAITLIST_JOINED",
+  "email": "user@example.com",
+  "metadata": { "name": "Kaushik" }
+}
+```
+
+#### Join Waitlist
+**POST** `/api/v1/waitlist/join`
+```json
+{"email": "user@example.com"}
+```
+**Response**:
+```json
+{"message": "Welcome to the waitlist!", "email": "user@example.com", "created_at": "2026-03-03T10:44:24Z"}
+```
 
 ---
 
@@ -189,9 +219,17 @@ All services share a single **Cloud SQL PostgreSQL** instance, isolated by table
 - **Financial → Notification**: Async fire-and-forget for critical alerts.
 - **Client → Java**: JWT-protected REST.
 
-### Authentication Flow
-1. **Local**: Register → Store Hash → Issue JWT.
-2. **Supabase**: Validate Externally → Sync User Record → Issue Mirror JWT if needed.
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `SUPABASE_AUTH_BASE_URL` | Supabase Auth API URL | `https://xyz.supabase.co/auth/v1` |
+| `SUPABASE_ANON_KEY` | Public Anon Key | `your-anon-key` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Admin Service Role Key | `your-service-role-key` |
+| `SUPABASE_ISSUER_URI` | JWT Issuer URL | `https://xyz.supabase.co/auth/v1` |
+| `DB_URL` | PostgreSQL JDBC URL | `jdbc:postgresql://localhost:5432/moneylane` |
+| `DB_USERNAME` | Database User | `postgres` |
+| `DB_PASSWORD` | Database Password | `password` |
+| `BREVO_API_KEY` | Brevo (Sendinblue) API Key | `xkeysib-xxxx` |
+| `FROM_EMAIL` | Sender Email Address | `noreply@elevenxstudios.com` |
 
 ---
 
@@ -309,7 +347,17 @@ Merges to `master` trigger automated deployments to **GCP Cloud Run**.
 2.  **Hexagonal**: `domain` → `application` → `infrastructure` → `api`.
 3.  **Migrations**: Add `.sql` file to `db/migration` in the relevant module.
 
----
+- **Unit Tests**: Test core domain logic and application services with mocks.
+- **Integration Tests**: Test infrastructure adapters (Persistence/PostgreSQL) using `@DataJpaTest`.
+- **Run Java tests**:
+  ```bash
+  ./gradlew test
+  ```
+- **Run Go tests (Notification Service)**:
+  ```bash
+  cd services/notification
+  go test -v ./...
+  ```
 
 ## 📊 Module Status
 
@@ -326,8 +374,38 @@ Merges to `master` trigger automated deployments to **GCP Cloud Run**.
 
 ## 📚 Documentation
 
-- [Profile Implementation Plan](docs/profile-implementation-plan.md)
-- [Profile Walkthrough](docs/profile-walkthrough.md)
+- **Main API** (`.github/workflows/cd.yml`): Deploys the Java monolith after CI passes
+- **Waitlist Service** (`.github/workflows/cd-waitlist.yml`): Deploys on `services/waitlist/**` changes
+- **Notification Service** (`.github/workflows/cd-notification.yml`): Deploys on `services/notification/**` changes
+
+**Shared Infrastructure**:
+- **Auth**: Workload Identity Federation (OIDC) — no long-lived credentials
+- **Image Registry**: GCP Artifact Registry (tagged with git SHA)
+- **Database**: Cloud SQL via proxy, credentials from Secret Manager
+- **Health Gate**: Retry-based verification
+
+### Required GitHub Secrets
+
+| Secret | Description |
+|--------|-------------|
+| `GCP_PROJECT_ID` | Google Cloud project ID |
+| `GCP_REGION` | Deployment region (e.g., `us-central1`) |
+| `GCP_ARTIFACT_REPO` | Artifact Registry repository name |
+| `CLOUD_RUN_SERVICE` | Cloud Run service name |
+| `WIF_PROVIDER` | Workload Identity Federation provider |
+| `WIF_SERVICE_ACCOUNT` | GCP service account for deployments |
+| `DB_URL` | Production database JDBC URL |
+| `DB_USERNAME` | Production database username |
+
+> **Note**: `DB_PASSWORD` is managed via GCP Secret Manager (`db-password`), not GitHub Secrets.
+>
+> The waitlist service uses `waitlist-database-url` in Secret Manager for its `DATABASE_URL`.
+
+### Health Check
+```bash
+curl https://api.moneylane.elevenxstudios.com/actuator/health
+# → {"status":"UP"}
+```
 
 ---
 Developed with ❤️ by **elevenxstudios**.
