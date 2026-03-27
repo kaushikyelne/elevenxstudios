@@ -44,7 +44,9 @@ moneylane/
 │   └── insight/        # Analytics and reports
 ├── services/
 │   ├── waitlist/       # Pre-launch waitlist microservice (Python/FastAPI)
-│   └── notification/   # Async notification service (Go/Clean Arch)
+│   ├── notification/   # Async notification service (Go/Clean Arch)
+│   ├── financial-service/# Financial engine & intervention (Python/FastAPI)
+│   └── agent-service/  # Proactive intervention agent (Python/FastAPI)
 ├── shared/
 │   ├── kernel/         # Core domain primitives (UserId, etc.)
 │   └── contracts/      # Cross-module communication contracts
@@ -100,17 +102,6 @@ Go-based async notification engine utilizing Brevo for transactional emails. Bui
 | `/notifications/send` | POST | Send a transactional email based on an event type |
 | `/notifications/health` | GET | Health check |
 
-#### Send Notification
-**POST** `/notifications/send`
-```json
-{
-  "event_id": "evt_abc123",
-  "event_type": "WAITLIST_JOINED",
-  "email": "user@example.com",
-  "metadata": { "name": "Kaushik" }
-}
-```
-
 #### Join Waitlist
 **POST** `/api/v1/waitlist/join`
 ```json
@@ -120,6 +111,18 @@ Go-based async notification engine utilizing Brevo for transactional emails. Bui
 ```json
 {"message": "Welcome to the waitlist!", "email": "user@example.com", "created_at": "2026-03-03T10:44:24Z"}
 ```
+
+### Financial Service
+Python-based core financial processing engine. Handles transaction analysis, budget calculations, and proactive intervention triggering.
+
+- **Stack**: Python 3.12 · FastAPI · SQLAlchemy · Pydantic
+- **Features**: Real-time spending analysis, budget soft-blocking logic, intervention pattern matching.
+
+### Agent Service
+Proactive intervention agent that orchestrates user notifications and smart-default suggestions for financial health.
+
+- **Stack**: Python 3.12 · FastAPI · Google AI (Generative)
+- **Features**: Generative AI suggestions, loss-framed intervention messaging, multi-channel notification orchestration via the Notification Service.
 
 ## Getting Started
 
@@ -257,6 +260,11 @@ Each module contains its own sets of tests following the hexagonal layers.
   ```bash
   cd services/notification
   go test -v ./...
+  ```
+- **Run Python tests (Financial Service)**:
+  ```bash
+  cd services/financial-service
+  pytest
   ```
 
 ## CI/CD
