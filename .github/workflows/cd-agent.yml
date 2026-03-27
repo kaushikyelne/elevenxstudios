@@ -1,13 +1,13 @@
-name: CD Notification
+name: CD Agent Service
 
 on:
   push:
     branches: [master]
     paths:
-      - 'services/notification/**'
+      - 'services/agent-service/**'
 
 concurrency:
-  group: cd-notification-${{ github.ref }}
+  group: cd-agent-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -23,8 +23,8 @@ jobs:
       PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
       REGION: ${{ secrets.GCP_REGION }}
       ARTIFACT_REPO: ${{ secrets.GCP_ARTIFACT_REPO }}
-      SERVICE_NAME: notification-service
-      IMAGE_NAME: notification-api
+      SERVICE_NAME: agent-service
+      IMAGE_NAME: agent-api
       IMAGE_TAG: ${{ github.sha }}
 
     steps:
@@ -43,21 +43,11 @@ jobs:
       - name: Configure Docker
         run: gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.22'
-
-      - name: Run Tests
-        run: |
-          cd services/notification
-          go test ./internal/service/... -v
-
       - name: Build Docker image
         run: |
           docker build \
             -t ${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPO}/${IMAGE_NAME}:${IMAGE_TAG} \
-            services/notification/
+            services/agent-service/
 
       - name: Push Docker image
         run: |
@@ -73,14 +63,13 @@ jobs:
             --no-allow-unauthenticated \
             --revision-suffix="$(echo ${IMAGE_TAG} | cut -c1-7)-$(date +%s)" \
             --add-cloudsql-instances="moneylane-prod:us-central1:moneylane-db" \
-            --update-secrets="DATABASE_URL=waitlist-database-url:latest,BREVO_API_KEY=brevo-api-key:latest" \
-            --update-env-vars="FROM_EMAIL=noreply@elevenxstudios.com" \
+            --update-secrets="GEMINI_API_KEY=gemini-api-key:latest" \
             --cpu=1 \
-            --memory=256Mi \
-            --concurrency=10 \
+            --memory=512Mi \
+            --concurrency=20 \
             --timeout=60 \
             --min-instances=0 \
-            --max-instances=5 \
+            --max-instances=3 \
             --quiet
 
       - name: Get Service URL
@@ -112,11 +101,11 @@ jobs:
             exit 1
           fi
 
-          echo "Verifying Health Check at: $SERVICE_URL/notifications/health"
+          echo "Verifying Health Check at: $SERVICE_URL/api/v1/agent/health"
           
           for i in {1..5}; do
-            if curl --fail --silent -H "Authorization: Bearer ${TOKEN}" "$SERVICE_URL/notifications/health"; then
-              echo "✅ Notification service healthy"
+            if curl --fail --silent -H "Authorization: Bearer ${TOKEN}" "$SERVICE_URL/api/v1/agent/health"; then
+              echo "✅ Agent service healthy"
               exit 0
             fi
             echo "Attempt $i failed, retrying in 5s..."
