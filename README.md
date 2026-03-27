@@ -134,7 +134,9 @@ moneylane/
 │   └── insight/        # Analytics and reports
 ├── services/
 │   ├── waitlist/       # Pre-launch waitlist microservice (Python/FastAPI)
-│   └── notification/   # Async notification service (Go/Clean Arch)
+│   ├── notification/   # Async notification service (Go/Clean Arch)
+│   ├── financial-service/# Financial engine & intervention (Python/FastAPI)
+│   └── agent-service/  # Proactive intervention agent (Python/FastAPI)
 ├── shared/
 │   ├── kernel/         # Core domain primitives (UserId, etc.)
 │   └── contracts/      # Cross-module communication contracts
@@ -159,6 +161,7 @@ moneylane/
 - **Predictor**: Real-time spending pace projection.
 - **Intervention Engine**: 3-check pipeline (Soft-block → Daily Limit → Predictive Warning).
 - **Ranking**: Actionability-weighted insight scoring (`Impact × 0.6 + Actionability × 0.4`).
+- **Stack**: Python 3.12 · FastAPI · SQLAlchemy · Pydantic
 </details>
 
 <details>
@@ -167,42 +170,16 @@ moneylane/
 - **Persona**: Action-first co-pilot using loss-framing.
 - **Tools**: Autonomous execution via `apply_action()` on backend.
 - **Engine**: Google Gemini 2.0 Flash.
+- **Features**: Generative AI suggestions, loss-framed intervention messaging, multi-channel notification orchestration.
 </details>
 
 <details>
 <summary><b>📧 Notification Service (Go)</b></summary>
 
-### Notification Service
-Go-based async notification engine utilizing Brevo for transactional emails. Built with clean architecture and idempotent processing.
-
-- **Stack**: Go 1.22+ · PostgreSQL · Brevo API · slog (structured logging)
-- **Features**: Event-driven processing, 3x automatic retries for email delivery, idempotent event handling (INSERT-first strategy).
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/notifications/send` | POST | Send a transactional email based on an event type |
-| `/notifications/health` | GET | Health check |
-
-#### Send Notification
-**POST** `/notifications/send`
-```json
-{
-  "event_id": "evt_abc123",
-  "event_type": "WAITLIST_JOINED",
-  "email": "user@example.com",
-  "metadata": { "name": "Kaushik" }
-}
-```
-
-#### Join Waitlist
-**POST** `/api/v1/waitlist/join`
-```json
-{"email": "user@example.com"}
-```
-**Response**:
-```json
-{"message": "Welcome to the waitlist!", "email": "user@example.com", "created_at": "2026-03-03T10:44:24Z"}
-```
+- **Engine**: Go-based async notification engine utilizing Brevo for transactional emails.
+- **Reliability**: Ensures exactly-once delivery via a PostgreSQL-backed idempotency table.
+- **Features**: 3x automatic retries for email delivery, idempotent event handling.
+</details>
 
 ---
 
@@ -233,42 +210,6 @@ All services share a single **Cloud SQL PostgreSQL** instance, isolated by table
 
 ---
 
-## 📏 Low-Level Design
-
-<details>
-<summary><b>Java Hexagonal Detail</b></summary>
-
-| Component | Layer | Purpose |
-|-----------|-------|---------|
-| `auth-common` | Domain/Ports | Shared `User` entity & persistence interfaces |
-| `auth-local` | Infrastructure | JWT signing, BCrypt, JPA Adapters |
-| `profile` | Application | Lazy profile creation, self-service logic |
-
-</details>
-
-<details>
-<summary><b>Financial Engine (Python)</b></summary>
-
-- **Transaction Path**: Log → Categorize → Update Budget → Trigger Intervention Pipeline.
-- **Insight Detecting**:
-  - Overspending: `spent > limit`
-  - Waste: e.g., Late-night Swiggy orders > ₹500.
-  - Behavior: Recurring weekday Uber rides > 9 PM.
-</details>
-
-<details>
-<summary><b>Notification Reliability (Go)</b></summary>
-
-The service ensures exactly-once delivery via a PostgreSQL-backed idempotency table.
-1. `POST` request with `event_id`.
-2. Attempt `INSERT` into `notifications`.
-3. If unique constraint fails → `200 Already Processed`.
-4. If success → Dispatch to Brevo + Update status.
-
-</details>
-
----
-
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -296,6 +237,9 @@ docker-compose up -d db
 
 # Run Python Services (example)
 cd services/financial-service && uvicorn app.main:app --port 8082
+
+# Run Go Service
+cd services/notification && go run cmd/server/main.go
 ```
 
 ---
@@ -307,6 +251,7 @@ cd services/financial-service && uvicorn app.main:app --port 8082
 | **Core API** | `https://api.moneylane.elevenxstudios.com` | [/swagger-ui/index.html](https://api.moneylane.elevenxstudios.com/swagger-ui/index.html) |
 | **Financial** | `:8082` | `/docs` (FastAPI Swagger) |
 | **Agent** | `:8083` | `/docs` |
+| **Notification** | `:8081` | `/notifications/health` |
 
 ---
 
@@ -318,6 +263,9 @@ cd services/financial-service && uvicorn app.main:app --port 8082
 
 # Run Python tests (Financial Service)
 cd services/financial-service && pytest
+
+# Run Go tests (Notification Service)
+cd services/notification && go test -v ./...
 ```
 
 ---
@@ -326,7 +274,7 @@ cd services/financial-service && pytest
 
 Merges to `master` trigger automated deployments to **GCP Cloud Run**.
 
-- **Global CI**: Tests both Java and Python services on every PR.
+- **Global CI**: Tests both Java, Python, and Go services on every PR.
 - **CD Pipeline**: OIDC via Workload Identity (passwordless).
 - **Security**: Database credentials managed via GCP Secret Manager.
 
@@ -344,20 +292,10 @@ Merges to `master` trigger automated deployments to **GCP Cloud Run**.
 ## 🛠️ Development Workflow
 
 1.  **Add Module**: Create in `modules/`, register in `settings.gradle.kts`.
-2.  **Hexagonal**: `domain` → `application` → `infrastructure` → `api`.
+2.  **Hexagonal Architecture**: `domain` → `application` → `infrastructure` → `api`.
 3.  **Migrations**: Add `.sql` file to `db/migration` in the relevant module.
 
-- **Unit Tests**: Test core domain logic and application services with mocks.
-- **Integration Tests**: Test infrastructure adapters (Persistence/PostgreSQL) using `@DataJpaTest`.
-- **Run Java tests**:
-  ```bash
-  ./gradlew test
-  ```
-- **Run Go tests (Notification Service)**:
-  ```bash
-  cd services/notification
-  go test -v ./...
-  ```
+---
 
 ## 📊 Module Status
 
@@ -383,29 +321,6 @@ Merges to `master` trigger automated deployments to **GCP Cloud Run**.
 - **Image Registry**: GCP Artifact Registry (tagged with git SHA)
 - **Database**: Cloud SQL via proxy, credentials from Secret Manager
 - **Health Gate**: Retry-based verification
-
-### Required GitHub Secrets
-
-| Secret | Description |
-|--------|-------------|
-| `GCP_PROJECT_ID` | Google Cloud project ID |
-| `GCP_REGION` | Deployment region (e.g., `us-central1`) |
-| `GCP_ARTIFACT_REPO` | Artifact Registry repository name |
-| `CLOUD_RUN_SERVICE` | Cloud Run service name |
-| `WIF_PROVIDER` | Workload Identity Federation provider |
-| `WIF_SERVICE_ACCOUNT` | GCP service account for deployments |
-| `DB_URL` | Production database JDBC URL |
-| `DB_USERNAME` | Production database username |
-
-> **Note**: `DB_PASSWORD` is managed via GCP Secret Manager (`db-password`), not GitHub Secrets.
->
-> The waitlist service uses `waitlist-database-url` in Secret Manager for its `DATABASE_URL`.
-
-### Health Check
-```bash
-curl https://api.moneylane.elevenxstudios.com/actuator/health
-# → {"status":"UP"}
-```
 
 ---
 Developed with ❤️ by **elevenxstudios**.
