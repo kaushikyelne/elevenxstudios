@@ -104,4 +104,12 @@ The service is deployed with `--no-allow-unauthenticated`. To call it from anoth
 The Waitlist service (Python) triggers this service using a fire-and-forget pattern. It generates a unique `event_id` for every join request to ensure that duplicate signups don't result in duplicate emails.
 
 ---
+
+## 🧹 Maintenance
+
+### Idempotency Table Cleanup
+The `notifications` table stores every `event_id` to prevent duplicates. As traffic grows, this table will expand. 
+**Recommendation**: Implement a recurring job (e.g., Cloud Scheduler + a `/cleanup` endpoint) to delete records older than 30 or 90 days.
+
+---
 © 2026 ElevenX Studios. Part of the MoneyLane ecosystem.
