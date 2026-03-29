@@ -85,15 +85,31 @@ go test ./internal/service/...
 | `FROM_EMAIL` | Authorized sender address (e.g., noreply@elevenxstudios.com) |
 | `PORT` | Listening port (Default: 8080) |
 
-### GCP Cloud Run
-Deployed automatically via GitHub Actions on push to `master`. 
-- **Service Account**: Granted `Secret Manager Secret Accessor` and `Cloud SQL Client`.
-- **Identity**: Configured for private internal VPC ingress only (Authorized via OIDC).
+### Production Configuration
+
+#### 1. Database DSN (Cloud SQL)
+When deploying to Cloud Run, the `DATABASE_URL` must use the Unix socket for the Cloud SQL Auth Proxy:
+```
+user=postgres password='your-password' dbname=moneylane host=/cloudsql/moneylane-prod:us-central1:moneylane-db sslmode=disable
+```
+
+#### 2. Service-to-Service Authentication
+The service is deployed with `--no-allow-unauthenticated`. To call it from another service (like the Waitlist service), the caller must include an OIDC ID Token in the `Authorization` header:
+- **Audience**: `https://notification-service-972358167214.us-central1.run.app`
+- **Header**: `Authorization: Bearer $(gcloud auth print-identity-token --audience=...)`
 
 ---
 
 ## 📝 Waitlist Integration
 The Waitlist service (Python) triggers this service using a fire-and-forget pattern. It generates a unique `event_id` for every join request to ensure that duplicate signups don't result in duplicate emails.
+
+---
+
+## 🧹 Maintenance
+
+### Idempotency Table Cleanup
+The `notifications` table stores every `event_id` to prevent duplicates. As traffic grows, this table will expand. 
+**Recommendation**: Implement a recurring job (e.g., Cloud Scheduler + a `/cleanup` endpoint) to delete records older than 30 or 90 days.
 
 ---
 © 2026 ElevenX Studios. Part of the MoneyLane ecosystem.
