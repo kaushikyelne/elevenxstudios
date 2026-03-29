@@ -85,10 +85,18 @@ go test ./internal/service/...
 | `FROM_EMAIL` | Authorized sender address (e.g., noreply@elevenxstudios.com) |
 | `PORT` | Listening port (Default: 8080) |
 
-### GCP Cloud Run
-Deployed automatically via GitHub Actions on push to `master`. 
-- **Service Account**: Granted `Secret Manager Secret Accessor` and `Cloud SQL Client`.
-- **Identity**: Configured for private internal VPC ingress only (Authorized via OIDC).
+### Production Configuration
+
+#### 1. Database DSN (Cloud SQL)
+When deploying to Cloud Run, the `DATABASE_URL` must use the Unix socket for the Cloud SQL Auth Proxy:
+```
+user=postgres password='your-password' dbname=moneylane host=/cloudsql/moneylane-prod:us-central1:moneylane-db sslmode=disable
+```
+
+#### 2. Service-to-Service Authentication
+The service is deployed with `--no-allow-unauthenticated`. To call it from another service (like the Waitlist service), the caller must include an OIDC ID Token in the `Authorization` header:
+- **Audience**: `https://notification-service-972358167214.us-central1.run.app`
+- **Header**: `Authorization: Bearer $(gcloud auth print-identity-token --audience=...)`
 
 ---
 
