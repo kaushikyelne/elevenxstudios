@@ -116,6 +116,7 @@ class GeminiJudge(BaseJudge):
 
     def _call_with_retry(self, message: str, test_case: TestCase) -> Optional[JudgeScore]:
         """Single judge call with up to _MAX_RETRIES attempts."""
+        # Using low temperature for deterministic evaluation results
         prompt = _build_judge_prompt(message, test_case)
         for attempt in range(_MAX_RETRIES):
             try:
