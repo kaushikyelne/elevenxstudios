@@ -2,7 +2,8 @@
 Eval layer data models.
 Standalone — no dependency on app.* modules.
 """
-from dataclasses import dataclass, field
+# Pydantic models for evaluation schema
+from pydantic import BaseModel, Field
 from typing import List, Optional
 
 
