@@ -308,3 +308,4 @@ def save_results(results: List[EvalResult], summary: RunSummary, results_dir: Pa
         json.dump(payload, f, indent=2)
     logger.info(f"Results saved → {filename}")
     return filename
+# Batch logging refinement
